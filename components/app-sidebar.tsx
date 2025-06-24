@@ -30,7 +30,6 @@ const adminMenuItems = [
   { title: "Add Quiz", url: "/admin/addquiz", icon: PlusCircle },
   { title: "Add Project", url: "/admin/addproject", icon: PlusCircle },
   { title: "Add Formation", url: "/admin/addformation", icon: PlusCircle },
-
 ];
 
 export function AppSidebar() {
@@ -38,21 +37,10 @@ export function AppSidebar() {
   const [role, setRole] = useState<RoleType>("user");
 
   useEffect(() => {
-    try {
-      const userData = localStorage.getItem("user");
-      if (userData) {
-        const user = JSON.parse(userData);
-        // Vérifiez si role existe et est valide
-        if (user.role && (user.role === "admin" || user.role === "user")) {
-          setRole(user.role);
-        } else {
-          console.warn("Rôle non défini ou invalide dans localStorage, utilisation du rôle par défaut 'user'");
-        }
-      } else {
-        console.warn("Aucune donnée utilisateur trouvée dans localStorage");
-      }
-    } catch (err) {
-      console.error("Erreur lors de la lecture du rôle utilisateur dans localStorage", err);
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      const parsedUser = JSON.parse(storedUser);
+      setRole(parsedUser.role || "user");
     }
   }, []);
 

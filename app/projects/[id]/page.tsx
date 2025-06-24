@@ -57,13 +57,13 @@ export default function ProjectDetailsPage() {
         setLoading(true);
         const response = await fetch(`/api/projects/${params.id}`);
         if (!response.ok) {
-          throw new Error("Failed to fetch project");
+          throw new Error("Échec de la récupération du projet");
         }
         const data = await response.json();
         setProject(data);
       } catch (err: any) {
         setError(err.message);
-        console.error("Error fetching project:", err);
+        console.error("Erreur lors de la récupération du projet :", err);
       } finally {
         setLoading(false);
       }
@@ -102,9 +102,7 @@ export default function ProjectDetailsPage() {
       <div className="space-y-4">
         <div className="flex items-start justify-between">
           <div className="space-y-2">
-            <h1 className="text-3xl font-bold text-slate-900">
-              {project.title}
-            </h1>
+            <h1 className="text-3xl font-bold text-slate-900">{project.title}</h1>
             <p className="text-lg text-slate-600">{project.description}</p>
           </div>
           <Badge className={getDifficultyColor(project.difficulty)}>
@@ -169,14 +167,30 @@ export default function ProjectDetailsPage() {
         </CardContent>
       </Card>
 
-      {/* Resources */}
+      {/* Prérequis */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Prérequis</CardTitle>
+          <CardDescription>Ce que vous devez savoir avant de commencer</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ul className="space-y-2">
+            {project.prerequisites.map((prereq, idx) => (
+              <li key={idx} className="flex items-start gap-2 text-sm">
+                <span className="text-blue-600 mt-1">•</span>
+                {prereq}
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
+
+      {/* Ressources */}
       {project.resources && project.resources.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Ressources utiles</CardTitle>
-            <CardDescription>
-              Documentation et guides pour vous aider
-            </CardDescription>
+            <CardDescription>Documentation et guides pour vous aider</CardDescription>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2">
@@ -193,14 +207,12 @@ export default function ProjectDetailsPage() {
         </Card>
       )}
 
-      {/* Instructions détaillées (conditionnellement affichées) */}
+      {/* Instructions détaillées (affichage conditionnel) */}
       {showInstructions && (
         <Card className="mt-6 border-blue-200 bg-blue-50">
           <CardHeader>
             <CardTitle>Instructions pour démarrer</CardTitle>
-            <CardDescription>
-              Suivez ces étapes pour commencer le projet
-            </CardDescription>
+            <CardDescription>Suivez ces étapes pour commencer le projet</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -211,9 +223,7 @@ export default function ProjectDetailsPage() {
             </div>
 
             <div>
-              <h3 className="font-semibold mb-2">
-                2. Installer les dépendances
-              </h3>
+              <h3 className="font-semibold mb-2">2. Installer les dépendances</h3>
               <div className="bg-slate-800 text-white p-3 rounded-md font-mono text-sm">
                 cd [nom-du-projet]
                 <br />
@@ -229,9 +239,7 @@ export default function ProjectDetailsPage() {
             </div>
 
             <div>
-              <h3 className="font-semibold mb-2">
-                4. Ouvrir dans le navigateur
-              </h3>
+              <h3 className="font-semibold mb-2">4. Ouvrir dans le navigateur</h3>
               <p>
                 Accédez à{" "}
                 <span className="font-mono bg-slate-100 px-2 py-1 rounded">
@@ -242,10 +250,7 @@ export default function ProjectDetailsPage() {
             </div>
 
             <div className="pt-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowInstructions(false)}
-              >
+              <Button variant="outline" onClick={() => setShowInstructions(false)}>
                 Masquer les instructions
               </Button>
             </div>
@@ -253,33 +258,27 @@ export default function ProjectDetailsPage() {
         </Card>
       )}
 
-      {/* Action Buttons */}
-      <div className="flex gap-4 pt-4">
+      {/* Boutons d'action */}
+      <div className="flex gap-4 pt-4 flex-wrap">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button size="lg" className="flex-1">
+            <Button size="lg" className="flex-1 min-w-[180px]">
               Démarrer le projet <ChevronDown className="ml-2 h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56">
-            <DropdownMenuItem
-              onClick={() => setShowInstructions(!showInstructions)}
-            >
+            <DropdownMenuItem onClick={() => setShowInstructions(!showInstructions)}>
               <BookOpen className="mr-2 h-4 w-4" />
-              <span>Voir les instructions</span>
+              Voir les instructions
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => setShowProgressTracker(!showProgressTracker)}
-            >
+            <DropdownMenuItem onClick={() => setShowProgressTracker(!showProgressTracker)}>
               <ListTodo className="mr-2 h-4 w-4" />
-              <span>Gérer les étapes</span>
+              Gérer les étapes
             </DropdownMenuItem>
             {project.githubUrl && (
-              <DropdownMenuItem
-                onClick={() => window.open(project.githubUrl, "_blank")}
-              >
+              <DropdownMenuItem onClick={() => window.open(project.githubUrl, "_blank")}>
                 <Github className="mr-2 h-4 w-4" />
-                <span>Cloner le dépôt</span>
+                Cloner le dépôt
               </DropdownMenuItem>
             )}
             <DropdownMenuItem
@@ -287,11 +286,11 @@ export default function ProjectDetailsPage() {
                 navigator.clipboard.writeText(
                   `git clone ${project.githubUrl || "URL_DU_REPO"}`
                 );
-                alert("Commande copiée dans le presse-papier!");
+                alert("Commande copiée dans le presse-papier !");
               }}
             >
               <Copy className="mr-2 h-4 w-4" />
-              <span>Copier la commande git</span>
+              Copier la commande git
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() =>
@@ -299,10 +298,11 @@ export default function ProjectDetailsPage() {
               }
             >
               <Download className="mr-2 h-4 w-4" />
-              <span>Télécharger les fichiers</span>
+              Télécharger les fichiers
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
         {project.githubUrl && (
           <Button
             variant="outline"
@@ -325,10 +325,7 @@ export default function ProjectDetailsPage() {
 
       {/* Gestionnaire d'étapes du projet */}
       {showProgressTracker && (
-        <BackendProgressTracker
-          projectId={project._id}
-          projectTitle={project.title}
-        />
+        <BackendProgressTracker projectId={project._id} projectTitle={project.title} />
       )}
     </div>
   );

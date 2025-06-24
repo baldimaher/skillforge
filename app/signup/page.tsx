@@ -19,7 +19,7 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -38,7 +38,7 @@ export default function SignupPage() {
 
       if (res.ok) {
         alert(data.message);
-        router.push("/"); // redirection vers la page login
+        router.push("/"); // redirection vers login
       } else {
         setError(data.error || "Erreur lors de la création du compte");
       }
@@ -153,10 +153,10 @@ export default function SignupPage() {
 
           <p className="text-center text-sm text-gray-600">
             Vous avez déjà un compte ?{" "}
-            <a href="/" className="text-indigo-600 hover:underline font-medium">Connectez-vous ici</a>
+            <a href="/" className="text-indigo-600 hover:underline font-medium">
+              Connectez-vous ici
+            </a>
           </p>
-
-      
         </div>
       </div>
     </div>

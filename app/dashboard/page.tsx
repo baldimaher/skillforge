@@ -34,8 +34,45 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* ... les 4 blocs chiffrés restent identiques ... */}
-        {/* pas modifiés ici pour clarté */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-600">Total Projects</p>
+              <p className="text-3xl font-bold text-slate-900">12</p>
+            </div>
+            <div className="text-2xl">🚀</div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-600">Completed</p>
+              <p className="text-3xl font-bold text-green-600">8</p>
+            </div>
+            <div className="text-2xl">✅</div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-600">In Progress</p>
+              <p className="text-3xl font-bold text-blue-600">3</p>
+            </div>
+            <div className="text-2xl">⏳</div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-600">Quiz Score</p>
+              <p className="text-3xl font-bold text-purple-600">85%</p>
+            </div>
+            <div className="text-2xl">📊</div>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -66,7 +103,7 @@ export default function DashboardPage() {
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <h3 className="text-lg font-semibold text-slate-900 mb-4">Quick Actions</h3>
           <div className="space-y-3">
-            {/* ... */}
+            {/* ... tes boutons/actions rapides ici */}
           </div>
         </div>
       </div>

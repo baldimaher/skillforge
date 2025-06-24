@@ -1,9 +1,7 @@
 "use client";
 
-import {
-  Avatar,
-  AvatarFallback,
-} from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Bell, Search } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,17 +12,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useEffect, useState } from "react";
 
-import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useRouter } from "next/navigation";
 
 export function TopNav() {
   const router = useRouter();
   const [user, setUser] = useState<{ firstName?: string; email?: string; role?: string } | null>(null);
-
   const [formations, setFormations] = useState<
     {
       _id: string;
@@ -34,7 +29,6 @@ export function TopNav() {
       videoUrl?: string;
     }[]
   >([]);
-
   const [notifCount, setNotifCount] = useState(0);
 
   useEffect(() => {
@@ -46,9 +40,8 @@ export function TopNav() {
       .then((data) => {
         if (Array.isArray(data)) {
           setFormations(data);
-
           const viewed = JSON.parse(localStorage.getItem("formationsViewed") || "[]");
-          const nonViewedCount = data.filter((f: any) => !viewed.includes(f._id)).length;
+          const nonViewedCount = data.filter((f) => !viewed.includes(f._id)).length;
           setNotifCount(nonViewedCount);
         }
       })
@@ -65,8 +58,6 @@ export function TopNav() {
     }
   };
 
-  const lastFormation = formations.length > 0 ? formations[0] : null;
-
   const handleProfile = () => {
     router.push("/profil");
   };
@@ -76,13 +67,18 @@ export function TopNav() {
     window.location.href = "/";
   };
 
+  const lastFormation = formations.length > 0 ? formations[0] : null;
+
   return (
     <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-6">
       <div className="flex items-center gap-4">
         <SidebarTrigger />
         <div className="relative hidden md:block">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <Input placeholder="Search courses, projects..." className="w-64 pl-10 bg-slate-50 border-slate-200" />
+          <Input
+            placeholder="Search courses, projects..."
+            className="w-64 pl-10 bg-slate-50 border-slate-200"
+          />
         </div>
       </div>
 
@@ -98,7 +94,6 @@ export function TopNav() {
               )}
             </Button>
           </DropdownMenuTrigger>
-
           <DropdownMenuContent className="w-80 p-4" align="end" forceMount>
             <DropdownMenuLabel className="font-semibold text-lg mb-2">Dernière formation</DropdownMenuLabel>
             {lastFormation ? (
@@ -129,7 +124,6 @@ export function TopNav() {
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
-
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
@@ -137,11 +131,11 @@ export function TopNav() {
                   {user?.role === "admin" ? "Administrateur" : "Utilisateur"}
                 </p>
                 <p className="text-sm font-medium leading-none">{user?.firstName}</p>
-                <p className="text-xs leading-none text-muted-foreground">{user?.email || "email@exemple.com"}</p>
+                <p className="text-xs leading-none text-muted-foreground">
+                  {user?.email || "email@exemple.com"}
+                </p>
               </div>
             </DropdownMenuLabel>
-
-
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleProfile}>Profil</DropdownMenuItem>
             <DropdownMenuSeparator />

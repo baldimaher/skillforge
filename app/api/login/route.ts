@@ -34,11 +34,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Mot de passe incorrect" }, { status: 401 });
     }
 
-return NextResponse.json({ success: true, message: "✅ Connexion réussie",
-   user: {
-        _id: user._id.toString(), // IMPORTANT : inclure l'_id ici
-        email: user.email ,
-        role :user.role}, });
+    // ✅ Réponse avec _id, email et rôle
+    return NextResponse.json({
+      success: true,
+      message: "✅ Connexion réussie",
+      user: {
+        _id: user._id.toString(),
+        email: user.email,
+        role: user.role,
+      },
+    });
+
   } catch (error) {
     console.error("Erreur POST login:", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });

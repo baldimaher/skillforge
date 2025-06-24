@@ -18,6 +18,7 @@ export default function ProfilPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Chargement du profil au montage
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
@@ -49,6 +50,7 @@ export default function ProfilPage() {
     }
   }, []);
 
+  // Chargement des formations recommandées selon compétences
   useEffect(() => {
     if (skills.length > 0) {
       const normalize = (text: string) =>
@@ -77,6 +79,7 @@ export default function ProfilPage() {
     }
   }, [skills]);
 
+  // Upload du fichier CV
   const handleSubmit = async () => {
     setError("");
     setSuccess("");
@@ -112,7 +115,7 @@ export default function ProfilPage() {
     }
   };
 
-  // ✅ Si admin, affiche un contenu spécial
+  // Rendu spécifique si admin
   if (role === "admin") {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 flex items-center justify-center">
@@ -123,15 +126,19 @@ export default function ProfilPage() {
           className="max-w-xl w-full bg-white rounded-2xl shadow-xl p-8 text-center"
         >
           <h1 className="text-3xl font-extrabold text-indigo-700 mb-2">Espace Administrateur</h1>
-          <p className="text-gray-600 mb-4">Bienvenue <span className="font-semibold">{email}</span></p>
-          <p className="text-gray-500">Vous pouvez gérer les utilisateurs, les formations et consulter les statistiques de la plateforme.</p>
-          {/* Tu peux ajouter ici d'autres composants spécifiques à l'admin */}
+          <p className="text-gray-600 mb-4">
+            Bienvenue <span className="font-semibold">{email}</span>
+          </p>
+          <p className="text-gray-500">
+            Vous pouvez gérer les utilisateurs, les formations et consulter les statistiques de la plateforme.
+          </p>
+          {/* Ajouter d'autres composants spécifiques à l'admin ici */}
         </motion.div>
       </div>
     );
   }
 
-  // Sinon, rendu normal du profil utilisateur :
+  // Rendu profil utilisateur classique
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <motion.div
@@ -220,7 +227,10 @@ export default function ProfilPage() {
         </div>
 
         {(error || success) && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`p-4 rounded-lg ${
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className={`p-4 rounded-lg ${
               error ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
             }`}
           >
