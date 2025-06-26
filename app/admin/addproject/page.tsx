@@ -6,12 +6,20 @@ export default function AddProjectPage() {
   const [title, setTitle] = useState("");
   const [link, setLink] = useState("");
   const [description, setDescription] = useState("");
+  const [technologies, setTechnologies] = useState(""); // chaîne séparée par des virgules
+  const [status, setStatus] = useState("à venir");
   const [difficulty, setDifficulty] = useState("Beginner");
   const [duration, setDuration] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Convertir la chaîne technologies en tableau (trim pour enlever espaces)
+    const techArray = technologies
+      .split(",")
+      .map((tech) => tech.trim())
+      .filter((tech) => tech.length > 0);
 
     try {
       const projectData: any = {
@@ -29,31 +37,40 @@ export default function AddProjectPage() {
 
       if (link) projectData.githubUrl = link;
 
-      const res = await fetch("/api/projects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(projectData),
-      });
+        const res = await fetch("/api/projects", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                title,
+                description,
+                technologies: techArray,
+                status,
+            }),
+        });
 
-      const data = await res.json();
-      if (res.ok) {
-        alert("Projet ajouté !");
-        setTitle("");
-        setLink("");
-        setDescription("");
-        setDuration("");
-        setErrorMsg("");
-      } else {
-        if (data.errors) {
-          setErrorMsg(data.errors.map((err: any) => err.message).join(" | "));
-        } else {
-          setErrorMsg(data.message || "Erreur lors de l'ajout.");
+        try {
+            const data = await res.json();
+
+            if (res.ok) {
+                alert("Projet ajouté !");
+                setTitle("");
+                setLink?.(""); // only if setLink is defined
+                setDescription("");
+                setDuration?.(""); // only if setDuration is defined
+                setTechnologies?.(""); // only if setTechnologies is defined
+                setStatus?.("à venir"); // only if setStatus is defined
+                setErrorMsg?.("");
+            } else {
+                if (data.errors) {
+                    setErrorMsg?.(data.errors.map((err: any) => err.message).join(" | "));
+                } else {
+                    setErrorMsg?.(data.message || "Erreur lors de l'ajout.");
+                    alert?.(data.message || "Erreur lors de l'ajout.");
+                }
+            }
+        } catch (error) {
+            console.error("Erreur:", error);
         }
-      }
-    } catch (error) {
-      console.error("Erreur:", error);
-    }
-  };
 
   return (
     <div className="max-w-xl mx-auto mt-10 p-4 bg-white rounded shadow">
@@ -86,30 +103,46 @@ export default function AddProjectPage() {
           className="w-full border px-3 py-2 rounded"
           required
         />
-        <select
-          value={difficulty}
-          onChange={(e) => setDifficulty(e.target.value)}
-          className="w-full border px-3 py-2 rounded"
-          required
-        >
-          <option value="Beginner">Débutant</option>
-          <option value="Intermediate">Intermédiaire</option>
-          <option value="Advanced">Avancé</option>
-        </select>
+          <select
+              value={difficulty}
+              onChange={(e) => setDifficulty(e.target.value)}
+              className="w-full border px-3 py-2 rounded"
+              required
+          >
+              <option value="Beginner">Débutant</option>
+              <option value="Intermediate">Intermédiaire</option>
+              <option value="Advanced">Avancé</option>
+          </select>
         <input
           type="text"
-          placeholder="Durée estimée (ex: 2 semaines)"
-          value={duration}
-          onChange={(e) => setDuration(e.target.value)}
+          placeholder="Technologies (séparées par des virgules)"
+          value={technologies}
+          onChange={(e) => setTechnologies(e.target.value)}
           className="w-full border px-3 py-2 rounded"
-          required
         />
-        <button
-          type="submit"
-          className="bg-green-600 text-white px-4 py-2 rounded"
-        >
-          Ajouter
-        </button>
+          <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="w-full border px-3 py-2 rounded"
+          >
+              <option value="à venir">À venir</option>
+              <option value="en cours">En cours</option>
+              <option value="terminé">Terminé</option>
+          </select>
+          <input
+              type="text"
+              placeholder="Durée estimée (ex: 2 semaines)"
+              value={duration}
+              onChange={(e) => setDuration(e.target.value)}
+              className="w-full border px-3 py-2 rounded"
+              required
+          />
+          <button
+              type="submit"
+              className="bg-green-600 text-white px-4 py-2 rounded"
+          >
+              Ajouter
+          </button>
       </form>
     </div>
   );

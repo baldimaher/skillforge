@@ -238,6 +238,33 @@ export default function ProfilPage() {
           </motion.div>
         )}
 
+        {/* ✅ Boutons Mes données visibles uniquement pour les non-admin */}
+        {role !== "admin" && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+            <h3 className="text-xl font-semibold text-gray-800">📂 Mes données</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <a
+                href="/projects"
+                className="block bg-indigo-100 hover:bg-indigo-200 text-indigo-800 text-center py-3 rounded-xl shadow font-semibold transition"
+              >
+                🚀 Mes Projets
+              </a>
+              <a
+                href="/certificates"
+                className="block bg-green-100 hover:bg-green-200 text-green-800 text-center py-3 rounded-xl shadow font-semibold transition"
+              >
+                🎓 Mes Certificats
+              </a>
+              <a
+                href="/quiz"
+                className="block bg-purple-100 hover:bg-purple-200 text-purple-800 text-center py-3 rounded-xl shadow font-semibold transition"
+              >
+                🧠 Mes Quiz
+              </a>
+            </div>
+          </motion.div>
+        )}
+
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
           <h3 className="text-xl font-semibold text-gray-800">Compétences extraites</h3>
           {skills.length > 0 ? (

@@ -52,6 +52,7 @@ interface Props {
   projectTitle: string;
 }
 
+// Étapes par défaut à créer si aucune n'existe
 const DEFAULT_STEPS: CreateStepData[] = [
   { title: "Configuration environnement", priority: "high", hours: 2 },
   { title: "Analyse des exigences", priority: "high", hours: 3 },
@@ -77,6 +78,7 @@ export default function BackendProgressTracker({
 
   const handlePrint = () => window.print();
 
+  // Charger les étapes depuis le backend
   useEffect(() => {
     loadSteps();
   }, [projectId]);
@@ -86,6 +88,8 @@ export default function BackendProgressTracker({
       setLoading(true);
       setError(null);
       const data = await stepsAPI.getSteps(projectId);
+
+      // Si aucune étape n'existe, créer les étapes par défaut
       if (data.length === 0) {
         await createDefaultSteps();
       } else {
@@ -93,6 +97,7 @@ export default function BackendProgressTracker({
       }
     } catch (err: any) {
       setError(err.message || "Erreur lors du chargement des étapes");
+      console.error("Erreur:", err);
     } finally {
       setLoading(false);
     }
@@ -108,9 +113,11 @@ export default function BackendProgressTracker({
       setSteps(createdSteps);
     } catch (err: any) {
       setError("Erreur lors de la création des étapes par défaut");
+      console.error("Erreur:", err);
     }
   };
 
+  // Mettre à jour une étape
   const updateStep = async (stepId: string, updates: UpdateStepData) => {
     try {
       const updatedStep = await stepsAPI.updateStep(projectId, stepId, updates);
@@ -119,11 +126,14 @@ export default function BackendProgressTracker({
       );
     } catch (err: any) {
       setError(err.message || "Erreur lors de la mise à jour");
+      console.error("Erreur:", err);
     }
   };
 
+  // Ajouter une étape
   const addStep = async () => {
     if (!newStep.title.trim()) return;
+
     try {
       const step = await stepsAPI.createStep(projectId, newStep);
       setSteps((prev) => [...prev, step]);
@@ -131,18 +141,22 @@ export default function BackendProgressTracker({
       setShowAddDialog(false);
     } catch (err: any) {
       setError(err.message || "Erreur lors de l'ajout");
+      console.error("Erreur:", err);
     }
   };
 
+  // Supprimer une étape
   const deleteStep = async (stepId: string) => {
     try {
       await stepsAPI.deleteStep(projectId, stepId);
       setSteps((prev) => prev.filter((step) => step._id !== stepId));
     } catch (err: any) {
       setError(err.message || "Erreur lors de la suppression");
+      console.error("Erreur:", err);
     }
   };
 
+  // Calculer les statistiques
   const stats = {
     total: steps.length,
     done: steps.filter((s) => s.status === "done").length,
@@ -155,6 +169,7 @@ export default function BackendProgressTracker({
 
   const progress = stats.total > 0 ? (stats.done / stats.total) * 100 : 0;
 
+  // Fonctions utilitaires
   const getStatusIcon = (status: Step["status"]) => {
     switch (status) {
       case "done":
@@ -307,6 +322,7 @@ export default function BackendProgressTracker({
       </CardHeader>
 
       <CardContent>
+        {/* Affichage des erreurs */}
         {error && (
           <Alert className="mb-4" variant="destructive">
             <AlertCircle className="h-4 w-4" />

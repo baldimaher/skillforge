@@ -19,9 +19,11 @@ const userSchema = new mongoose.Schema({
   skills: { type: [String], default: [] },
   quizzes: [QuizResultSchema],
   role: { type: String, enum: ["user", "admin"], default: "user" }, // ← ICI
+  projectsTaken: [{ type: mongoose.Schema.Types.ObjectId, ref: "Project" }],  // <-- ajouté ici
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });
+
 
 const User = mongoose.models.User || mongoose.model("User", userSchema);
 

@@ -115,7 +115,7 @@ export default function AddQuizPage() {
             </div>
           ))}
           <button type="button" onClick={addQuestion} className="bg-gray-100 border px-4 py-2 rounded">
-            ➕Ajouter une question
+            ➕ Ajouter une question
           </button>
         </div>
 
