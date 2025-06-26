@@ -1,11 +1,14 @@
+// user/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 
 import User from "../../../models/User";
 import dbConnect from "../../../lib/mongo";
 
-export async function POST(req: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
-    const { email } = await req.json();
+    const { searchParams } = new URL(req.url);
+    const email = searchParams.get("email");
 
     if (!email) {
       return NextResponse.json({ error: "Email manquant." }, { status: 400 });

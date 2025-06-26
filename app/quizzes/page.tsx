@@ -7,7 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { CheckCircle, Play } from "lucide-react";
+import { CheckCircle, Clock, Folder } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useCallback, useEffect, useState } from "react";
 
@@ -31,6 +31,13 @@ interface QuizType {
   completed?: boolean;
   score?: number;
   lastAttemptDate?: string;
+  userAttempts?: { userId: string; lastAttemptDate: string }[];
+}
+
+interface UserType {
+  _id: string;
+  firstName: string;
+  lastName: string;
 }
 
 export default function QuizzesPage() {
@@ -45,6 +52,10 @@ export default function QuizzesPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [quizTimeLeft, setQuizTimeLeft] = useState<Record<string, string>>({});
+  const [timer, setTimer] = useState<number | null>(null);
+  const [showCertificate, setShowCertificate] = useState(false);
+  const [certificateReady, setCertificateReady] = useState(false);
+  const [user, setUser] = useState<UserType | null>(null);
 
   const fetchQuizzes = useCallback(async () => {
     setIsLoading(true);
@@ -62,42 +73,43 @@ export default function QuizzesPage() {
   }, []);
 
   useEffect(() => {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      setUser(JSON.parse(userStr));
+    }
     fetchQuizzes();
   }, [fetchQuizzes]);
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case "facile":
-        return "bg-green-100 text-green-800 border-green-200";
+        return "bg-green-100 text-green-700";
       case "moyen":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+        return "bg-yellow-100 text-yellow-700";
       case "difficile":
-        return "bg-red-100 text-red-800 border-red-200";
+        return "bg-red-100 text-red-700";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
+        return "bg-gray-100 text-gray-700";
     }
   };
 
   const getTimeUntilRetake = (lastAttemptDate: string): string => {
     const lastAttempt = new Date(lastAttemptDate);
-    const nextAvailable = new Date(lastAttempt.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 jours après
+    const nextAvailable = new Date(lastAttempt.getTime() + 7 * 24 * 60 * 60 * 1000);
     const now = new Date();
     const diffMs = nextAvailable.getTime() - now.getTime();
 
-    if (diffMs <= 0) return "Vous pouvez repasser maintenant !";
+    if (diffMs <= 0) return "Disponible maintenant !";
 
     const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    let remaining = "";
-    if (days > 0) remaining += `${days} jour${days > 1 ? "s" : ""}`;
-    if (hours > 0) remaining += `${remaining ? ", " : ""}${hours} heure${hours > 1 ? "s" : ""}`;
-
-    return `Repassable dans ${remaining}`;
+    return `Repassable dans ${days} jour${days > 1 ? "s" : ""}`;
   };
 
   const canRetakeQuiz = (quiz: QuizType) => {
-    if (!quiz.lastAttemptDate) return true;
-    const lastAttempt = new Date(quiz.lastAttemptDate);
+    if (!user || !quiz.userAttempts) return true;
+    const userAttempt = quiz.userAttempts.find((attempt) => attempt.userId === user._id);
+    if (!userAttempt || !userAttempt.lastAttemptDate) return true;
+    const lastAttempt = new Date(userAttempt.lastAttemptDate);
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     return lastAttempt <= sevenDaysAgo;
@@ -107,25 +119,31 @@ export default function QuizzesPage() {
     const updateTimeLeft = () => {
       const newTimes: Record<string, string> = {};
       quizzes.forEach((quiz) => {
-        if (quiz.completed && !canRetakeQuiz(quiz) && quiz.lastAttemptDate) {
-          newTimes[quiz._id] = getTimeUntilRetake(quiz.lastAttemptDate);
+        if (!canRetakeQuiz(quiz) && quiz.userAttempts) {
+          const userAttempt = quiz.userAttempts.find((attempt) => attempt.userId === user?._id);
+          if (userAttempt?.lastAttemptDate) {
+            newTimes[quiz._id] = getTimeUntilRetake(userAttempt.lastAttemptDate);
+          }
         }
       });
       setQuizTimeLeft(newTimes);
     };
 
-    updateTimeLeft(); // Appel initial
-    const intervalId = setInterval(updateTimeLeft, 60 * 1000); // Mise à jour toutes les minutes
-
+    updateTimeLeft();
+    const intervalId = setInterval(updateTimeLeft, 60 * 1000);
     return () => clearInterval(intervalId);
-  }, [quizzes]);
+  }, [quizzes, user]);
 
   const startQuiz = useCallback(
     (quiz: QuizType) => {
-      if (!canRetakeQuiz(quiz)) {
+      if (!user || !canRetakeQuiz(quiz)) {
         setMessage(
-          quiz.lastAttemptDate
-            ? getTimeUntilRetake(quiz.lastAttemptDate)
+          !user
+            ? "Vous devez être connecté pour passer un quiz."
+            : quiz.userAttempts && !canRetakeQuiz(quiz)
+            ? getTimeUntilRetake(
+                quiz.userAttempts.find((attempt) => attempt.userId === user._id)?.lastAttemptDate || ""
+              )
             : "Vous devez attendre 7 jours avant de repasser ce quiz."
         );
         return;
@@ -138,12 +156,39 @@ export default function QuizzesPage() {
         setScore(null);
         setError(null);
         setMessage(null);
+        setTimer(quiz.timeLimit * 60);
+        setShowCertificate(false);
+        setCertificateReady(false);
       } else {
         setError("Ce quiz n'a pas de questions valides.");
       }
     },
-    []
+    [user]
   );
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (timer !== null && timer > 0 && activeQuiz && score === null) {
+      interval = setInterval(() => {
+        setTimer((prev) => {
+          if (prev && prev <= 1) {
+            const finalScore = calculateScore(answers, activeQuiz);
+            setScore(finalScore);
+            saveQuizScore(activeQuiz._id, finalScore, answers);
+            return null;
+          }
+          return prev ? prev - 1 : null;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [timer, activeQuiz, answers, score]);
+
+  const formatTime = (seconds: number) => {
+    const min = Math.floor(seconds / 60);
+    const sec = seconds % 60;
+    return `${min}:${sec < 10 ? "0" : ""}${sec}`;
+  };
 
   const calculateScore = useCallback((answers: (number | null)[], quiz: QuizType) => {
     const correctCount = quiz.questions.reduce(
@@ -154,7 +199,7 @@ export default function QuizzesPage() {
   }, []);
 
   const saveQuizScore = useCallback(
-    async (quizId: string, score: number, answers: (number | null)[]) => {
+    async (quizId: string, finalScore: number, answers: (number | null)[]) => {
       setIsSaving(true);
       setMessage(null);
       try {
@@ -164,23 +209,22 @@ export default function QuizzesPage() {
           return;
         }
         const userObj = JSON.parse(userStr);
-        const userId = userObj._id || userObj.id || localStorage.getItem("userId");
+        const userId = userObj._id;
 
-        if (!userId || userId === "undefined") {
+        if (!userId) {
           setMessage("Identifiant utilisateur introuvable.");
           return;
         }
 
         const res = await fetch(`/api/quiz/${quizId}/submit`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             userId,
-            score,
+            score: finalScore,
             answers,
             title: activeQuiz?.title,
+            lastAttemptDate: new Date().toISOString(),
           }),
         });
 
@@ -193,6 +237,21 @@ export default function QuizzesPage() {
           throw new Error(errorData.message || "Erreur serveur");
         }
 
+        if (finalScore >= (activeQuiz?.passingScore ?? 0)) {
+          await fetch("/api/certificates/new", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId,
+              quizId,
+              quizTitle: activeQuiz?.title,
+              score: finalScore,
+              date: new Date(),
+            }),
+          });
+          setCertificateReady(true);
+        }
+
         setMessage("Score enregistré avec succès !");
         await fetchQuizzes();
       } catch (err) {
@@ -202,7 +261,7 @@ export default function QuizzesPage() {
         setIsSaving(false);
       }
     },
-    [fetchQuizzes, activeQuiz?.title]
+    [fetchQuizzes, activeQuiz?.title, activeQuiz?.passingScore]
   );
 
   const handleNextQuestion = useCallback(async () => {
@@ -235,12 +294,37 @@ export default function QuizzesPage() {
     }
   }, [answers, currentQuestionIndex]);
 
-  if (isLoading)
-    return <div className="text-center">Chargement des quiz...</div>;
+  const generateCertificate = () => {
+    const userStr = localStorage.getItem("user");
+    const user = userStr ? JSON.parse(userStr) : { firstName: "Utilisateur", lastName: "" };
+    const date = new Date().toLocaleDateString("fr-FR");
+
+    return (
+      <div className="p-8 bg-white rounded-lg shadow-lg max-w-md mx-auto text-center mt-8 border border-indigo-200">
+        <h2 className="text-3xl font-bold mb-6 text-indigo-800">Certificat de Réussite</h2>
+        <p className="text-gray-600">Ceci certifie que</p>
+        <p className="text-2xl font-semibold my-4 text-indigo-700">
+          {user.firstName} {user.lastName}
+        </p>
+        <p className="text-gray-600">a réussi le quiz</p>
+        <p className="text-xl font-medium text-indigo-600 my-4">{activeQuiz?.title}</p>
+        <p className="text-gray-600">avec un score de {score}%</p>
+        <p className="my-4 text-gray-500">Date : {date}</p>
+        <Button
+          onClick={() => window.print()}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg"
+        >
+          Imprimer le certificat
+        </Button>
+      </div>
+    );
+  };
+
+  if (isLoading) return <div className="text-center text-gray-600">Chargement des quiz...</div>;
 
   if (error)
     return (
-      <div className="text-center text-red-600">
+      <div className="text-center text-red-600 font-medium">
         Erreur : {error}
       </div>
     );
@@ -251,19 +335,24 @@ export default function QuizzesPage() {
       <div className="max-w-2xl mx-auto space-y-8 p-6 bg-white rounded-xl shadow-lg">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-3xl font-bold text-indigo-700 mb-1">{activeQuiz.title}</h1>
+            <h1 className="text-3xl font-bold text-indigo-800 mb-1">{activeQuiz.title}</h1>
             <span className="text-sm text-gray-500">
               Question {currentQuestionIndex + 1} / {activeQuiz.questions.length}
             </span>
           </div>
-          <Button
-            variant="outline"
-            className="border-red-400 text-red-600 hover:bg-red-50"
-            onClick={() => setActiveQuiz(null)}
-            disabled={isSaving}
-          >
-            Quitter le quiz
-          </Button>
+          <div className="flex items-center gap-4">
+            <span className="text-lg font-semibold text-red-600">
+              Temps restant: {timer !== null ? formatTime(timer) : "00:00"}
+            </span>
+            <Button
+              variant="outline"
+              className="border-red-400 text-red-600 hover:bg-red-50"
+              onClick={() => setActiveQuiz(null)}
+              disabled={isSaving}
+            >
+              Quitter le quiz
+            </Button>
+          </div>
         </div>
 
         <Card className="border-2 border-indigo-200">
@@ -336,19 +425,34 @@ export default function QuizzesPage() {
     return (
       <div className="max-w-xl mx-auto text-center space-y-8 p-8 bg-white rounded-xl shadow-lg">
         <h1 className="text-3xl font-bold text-green-700">Quiz terminé !</h1>
-        <div className="flex flex-col items-center space-y-2">
+        <div className="flex flex-col items-center space-y-4">
           <span className="text-5xl font-extrabold text-indigo-600">{score}%</span>
-          <span className="text-lg text-gray-600">
-            {score >= activeQuiz.passingScore
-              ? "Bravo, vous avez réussi !"
-              : "Dommage, essayez encore !"}
-          </span>
+          {score >= activeQuiz.passingScore ? (
+            <>
+              <div className="flex items-center gap-2 justify-center text-green-600 font-semibold text-xl">
+                <CheckCircle className="w-8 h-8" />
+                <p>Félicitations, vous avez réussi le quiz !</p>
+              </div>
+
+              {certificateReady && (
+                <Button
+                  onClick={() => setShowCertificate((v) => !v)}
+                  className="mt-6 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg shadow"
+                >
+                  {showCertificate ? "Cacher certificat" : "Voir certificat"}
+                </Button>
+              )}
+
+              {showCertificate && generateCertificate()}
+            </>
+          ) : (
+            <p className="text-red-600 text-lg font-semibold">
+              Désolé, vous n'avez pas atteint le score requis ({activeQuiz.passingScore}%).
+            </p>
+          )}
         </div>
-        <Button
-          className="mt-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full px-8"
-          onClick={() => setActiveQuiz(null)}
-          disabled={isSaving}
-        >
+
+        <Button onClick={() => setActiveQuiz(null)} className="mt-8" variant="outline">
           Retour à la liste des quiz
         </Button>
       </div>
@@ -356,70 +460,68 @@ export default function QuizzesPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Quizzes</h1>
-        <p className="text-slate-600 mt-2">Testez vos connaissances et suivez votre progression</p>
-      </div>
+    <div className="max-w-5xl mx-auto p-8 space-y-8">
+      <h1 className="text-4xl font-bold text-indigo-700 text-center mb-10">Explorez Nos Quiz</h1>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {quizzes.length > 0 ? (
-          quizzes.map((quiz: QuizType) => (
-            <Card key={quiz._id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <CardTitle className="text-lg">{quiz.title || "Quiz sans titre"}</CardTitle>
-                    <CardDescription>{quiz.description || "Aucune description"}</CardDescription>
-                  </div>
-                  {quiz.completed && <CheckCircle className="h-5 w-5 text-green-600" />}
+      {quizzes.length === 0 && !isLoading && (
+        <p className="text-center text-gray-500">Aucun quiz disponible pour le moment.</p>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {quizzes.map((quiz) => (
+          <Card
+            key={quiz._id}
+            onClick={() => startQuiz(quiz)}
+            className={`
+              relative
+              rounded-xl
+              border
+              border-indigo-200
+              bg-gradient-to-br from-indigo-50 to-white
+              shadow-md
+              hover:shadow-lg
+              transition-all
+              duration-300
+              overflow-hidden
+              ${!canRetakeQuiz(quiz) ? "opacity-50 cursor-not-allowed pointer-events-none" : "cursor-pointer hover:shadow-lg"}
+            `}
+          >
+            <CardHeader className="p-6">
+              <CardTitle className="text-xl font-semibold text-indigo-900">
+                {quiz.title}
+              </CardTitle>
+              <CardDescription className="text-gray-600 mt-2">
+                {quiz.description}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center gap-2">
+                <Folder className="w-5 h-5 text-indigo-500" />
+                <span className="text-sm text-gray-700">{quiz.category}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <Badge
+                  className={`px-3 py-1 rounded-full font-semibold ${getDifficultyColor(quiz.difficulty)}`}
+                >
+                  {quiz.difficulty}
+                </Badge>
+                <span className="text-sm text-gray-500">
+                  {quiz.userAttempts?.some((attempt) => attempt.userId === user?._id) ? "Terminé" : "Non terminé"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-indigo-500" />
+                <span className="text-sm text-gray-700">{quiz.timeLimit} minutes</span>
+              </div>
+              {!canRetakeQuiz(quiz) && quiz.userAttempts && (
+                <div className="text-sm text-red-600">
+                  {quizTimeLeft[quiz._id]}
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <Badge className={getDifficultyColor(quiz.difficulty)}>
-                      {quiz.difficulty || "Inconnu"}
-                    </Badge>
-                    {quiz.completed && (
-                      <span className="text-sm font-medium text-green-600">
-                        Score: {(quiz.score ?? quiz.passingScore) || 0}%
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-4 text-sm text-slate-600">
-                    <span>{quiz.questions?.length || 0} questions</span>
-                    <span>⏱️ {quiz.timeLimit || 0} min</span>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Button
-                      className="w-full"
-                      variant={quiz.completed ? "outline" : "default"}
-                      onClick={() => startQuiz(quiz)}
-                      disabled={isSaving || (quiz.completed && !canRetakeQuiz(quiz))}
-                    >
-                      <Play className="h-4 w-4 mr-2" />
-                      {quiz.completed
-                        ? canRetakeQuiz(quiz)
-                          ? "Reprendre le quiz"
-                          : "Quiz bloqué"
-                        : "Démarrer le quiz"}
-                    </Button>
-                    {quiz.completed && !canRetakeQuiz(quiz) && quizTimeLeft[quiz._id] && (
-                      <p className="text-sm text-red-600 text-center">{quizTimeLeft[quiz._id]}</p>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        ) : (
-          <p className="text-center text-slate-600">Aucun quiz disponible.</p>
-        )}
+              )}
+            </CardContent>
+          </Card>
+        ))}
       </div>
-      {message && <p className="text-red-600 text-center mt-4">{message}</p>}
     </div>
   );
 }

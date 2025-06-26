@@ -5,8 +5,7 @@ const QuizResultSchema = new mongoose.Schema({
   score: Number,
   date: Date,
   title: String, // Si tu choisis de garder le titre
-});
-const userSchema = new mongoose.Schema({
+});const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   phone: String,
@@ -18,10 +17,12 @@ const userSchema = new mongoose.Schema({
   cvText: { type: String, default: "" },
   skills: { type: [String], default: [] },
   quizzes: [QuizResultSchema],
-  role: { type: String, enum: ["user", "admin"], default: "user" }, // ← ICI
+  projectsTaken: [{ type: mongoose.Schema.Types.ObjectId, ref: "Project" }],  // <-- ajouté ici
+  role: { type: String, enum: ["user", "admin"], default: "user" },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });
+
 
 const User = mongoose.models.User || mongoose.model("User", userSchema);
 

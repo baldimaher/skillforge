@@ -29,7 +29,10 @@ export default function LoginPage() {
         localStorage.setItem("user", JSON.stringify(fullUser));
         localStorage.setItem("userId", fullUser._id);
         localStorage.setItem("email", fullUser.email);
+        localStorage.setItem("lastName", fullUser.lastName);
+        localStorage.setItem("userName", fullUser.firstName);
         localStorage.setItem("userRole", fullUser.role);
+
         router.push("/dashboard");
       } else {
         setError(data.message || "Erreur lors de la connexion");
