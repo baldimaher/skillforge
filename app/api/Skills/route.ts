@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const HUGGINGFACE_API_TOKEN = "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";
 const MODEL_URL = "https://api-inference.huggingface.co/models/dslim/bert-base-NER";
 
 export async function POST(req: NextRequest) {
