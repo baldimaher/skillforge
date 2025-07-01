@@ -1,22 +1,25 @@
-// models/Certificate.ts
-
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose, { Document, Schema, Types } from "mongoose";
 
 export interface ICertificate extends Document {
-  userId: string;
-  quizId: string;
+  userId: Types.ObjectId;
+  quizId: Types.ObjectId;
   quizTitle: string;
   score: number;
   date: Date;
+  pdfUrl?: string;
 }
 
 const CertificateSchema: Schema = new Schema({
-  userId: { type: String, required: true },
-  quizId: { type: String, required: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  quizId: { type: mongoose.Schema.Types.ObjectId, ref: "Quiz", required: true },
   quizTitle: { type: String, required: true },
   score: { type: Number, required: true },
   date: { type: Date, required: true },
+  pdfUrl: { type: String, required: false },
 });
 
-export default mongoose.models.Certificate ||
+const CertificateModel =
+  mongoose.models.Certificate ||
   mongoose.model<ICertificate>("Certificate", CertificateSchema);
+
+export default CertificateModel;

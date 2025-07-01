@@ -12,33 +12,54 @@ export const config = {
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
-// Fonction séparée pour appeler Hugging Face NER
-async function extractSkillsFromText(text: string): Promise<string[]> {
-  const HF_API_TOKEN = process.env.HF_API_TOKEN;
-  if (!HF_API_TOKEN) throw new Error("Token Hugging Face manquant");
+// 🔒 Fonction pour échapper les caractères spéciaux des mots-clés
+function escapeRegex(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
-  const response = await fetch(
-    "https://api-inference.huggingface.co/models/Nucha/Nucha_SkillNER_BERT",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${HF_API_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ inputs: text }),
-    }
-  );
+// 🔧 Normalisation du texte (minuscules, suppression des accents)
+function normalizeText(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\w\s+]/g, " ");
+}
 
-  if (!response.ok) throw new Error("Erreur API Hugging Face");
+// 🧠 Extraction simple des compétences par mots-clés
+function extractSkillsFromText(text: string): string[] {
+  const keywords = [
+    "react",
+    "nodejs",
+    "python",
+    "java",
+    "html",
+    "css",
+    "javascript",
+    "typescript",
+    "mongodb",
+    "sql",
+    "express",
+    "docker",
+    "aws",
+    "git",
+    "github",
+    "c++",
+    "nextjs",
+    "figma",
+    "firebase",
+    "tailwind",
+    "kotlin",
+    "flutter",
+    "android",
+  ];
 
-  const data = await response.json();
+  const normalizedText = normalizeText(text);
 
-  // Filtrer les entités "SKILL"
-  const skills = data
-    .filter((item: any) => item.entity.toUpperCase().includes("SKILL"))
-    .map((item: any) => item.word);
-
-  return Array.from(new Set(skills)); // supprimer doublons
+  return keywords.filter((skill) => {
+    const regex = new RegExp(`\\b${escapeRegex(skill)}\\b`, "i");
+    return regex.test(normalizedText);
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -58,7 +79,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Utilisateur non trouvé" }, { status: 404 });
     }
 
-    // Supprimer l'ancien CV si présent
+    // 🔄 Supprimer l’ancien CV si présent
     if (existingUser?.cv?.path) {
       const oldPath = path.join(process.cwd(), "public", existingUser.cv.path);
       try {
@@ -69,7 +90,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Sauvegarder le nouveau fichier
+    // 📥 Sauvegarder le nouveau CV
     const buffer = Buffer.from(await file.arrayBuffer());
     const uploadDir = path.join(process.cwd(), "public", "uploads");
     await mkdir(uploadDir, { recursive: true });
@@ -80,11 +101,15 @@ export async function POST(req: NextRequest) {
     const fullUrl = `${BASE_URL}${publicPath}`;
     await writeFile(filePath, buffer);
 
-    // Extraire le texte du PDF
+    // 📄 Extraire le texte du CV
     const parsed = await pdfParse(buffer);
-    const extractedSkills = await extractSkillsFromText(parsed.text);
+    console.log("Longueur texte extrait :", parsed.text.length);
 
-    // Mise à jour de l'utilisateur
+    // 🧠 Extraire les compétences à partir du texte
+    const extractedSkills = extractSkillsFromText(parsed.text);
+    console.log("Compétences extraites :", extractedSkills);
+
+    // 💾 Mise à jour utilisateur
     const updatedUser = await User.findOneAndUpdate(
       { email },
       {
@@ -106,8 +131,8 @@ export async function POST(req: NextRequest) {
       skills: updatedUser.skills,
       cvUrl: updatedUser.cvUrl,
     });
-  } catch (err) {
-    console.error("Erreur dans /api/upload :", err);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+  } catch (err: any) {
+    console.error("Erreur dans /api/upload :", err.message);
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

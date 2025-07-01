@@ -25,7 +25,7 @@ export default function CertificatsPage() {
     }
   }, []);
 
-  if (loading) return <p className="p-4 text-center">Chargement...</p>;
+  if (loading) return <p className="p-4 text-center">Chargementqqq...</p>;
 
   return (
     <div className="p-6 max-w-3xl mx-auto">

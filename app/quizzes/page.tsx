@@ -435,13 +435,19 @@ export default function QuizzesPage() {
                             </div>
 
                             {certificateReady && (
-                                <Button
-                                    onClick={() => setShowCertificate((v) => !v)}
-                                    className="mt-6 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg shadow"
+                               <Button
+                                onClick={() => {
+                                    if (activeQuiz?._id) {
+                                    window.open(`/certificate/${activeQuiz._id}`, "_blank");
+                                    }
+                                }}
+                                className="mt-6 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg shadow"
                                 >
-                                    {showCertificate ? "Cacher certificat" : "Voir certificat"}
+                                Voir certificat
                                 </Button>
-                            )}
+
+                                )}
+
 
                             {showCertificate && generateCertificate()}
                         </>

@@ -1,10 +1,11 @@
 declare module 'pdf-parse' {
   import { Buffer } from 'buffer';
-declare module "pdf-parse" {
+
   interface PDFParseOptions {
     max?: number;
-    pagerender?: (pageData: any) => Promise<string>;
+    pagerender?: (pageData: any) => Promise<string> | string;
   }
+
   interface PDFInfo {
     numpages: number;
     numrender: number;
@@ -12,16 +13,15 @@ declare module "pdf-parse" {
     metadata: any;
     version: string;
   }
+
   interface PDFParseResult {
     text: string;
     info: PDFInfo;
     metadata: any;
     version: string;
   }
-  function pdf(buffer: Buffer): Promise<PDFParseResult>;
-  export = pdf;
-    text: string;
-  }
-  function pdfParse(data: Buffer | Uint8Array, options?: PDFParseOptions): Promise<PDFInfo>;
+
+  function pdfParse(data: Buffer | Uint8Array, options?: PDFParseOptions): Promise<PDFParseResult>;
+
   export = pdfParse;
 }
