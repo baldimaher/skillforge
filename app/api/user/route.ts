@@ -12,18 +12,40 @@ export async function POST(req: NextRequest) {
     }
 
     await dbConnect();
+
     const user = await User.findOne({ email });
 
     if (!user) {
       return NextResponse.json({ error: "Utilisateur non trouvé." }, { status: 404 });
     }
 
+    let totalUsers;
+    if (user.role === "admin") {
+      totalUsers = await User.countDocuments();
+    }
+
     return NextResponse.json({
       skills: user.skills || [],
       cvUrl: user.cvUrl || null,
+      ...(user.role === "admin" && { totalUsers }),
     });
   } catch (err) {
     console.error("Erreur dans /api/user :", err);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+  }}
+export async function GET(req: NextRequest, { params }: { params: { _id: string } }) {
+  try {
+    await dbConnect();
+
+    const user = await User.findById(params._id).populate("certificates");
+    if (!user) {
+      return NextResponse.json({ error: "Utilisateur non trouvé." }, { status: 404 });
+    }
+
+    return NextResponse.json(user);
+  } catch (err) {
+    console.error(err);
+    return NextResponse.json({ error: "Erreur serveur." }, { status: 500 });
   }
 }
+
