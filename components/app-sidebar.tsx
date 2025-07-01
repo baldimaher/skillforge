@@ -43,14 +43,13 @@ export function AppSidebar() {
   }, []);
 
   // ✅ Menu commun pour tous les rôles
- const menuItems = [
-  { title: "Dashboard", url: "/dashboard", icon: Home },
-  { title: "Progress", url: "/progress", icon: BarChart3 },
-  { title: "Quizzes", url: "/quizzes", icon: BookOpen },
-  { title: "Projects", url: "/projects", icon: Code2 },
-  { title: "Formation", url: "/Formation", icon: GraduationCap },
-  { title: "Feedback", url: "/feedback", icon: Trophy }, // ✅ lien ajouté ici
-];
+  const menuItems = [
+    { title: "Dashboard", url: "/dashboard", icon: Home },
+    { title: "Progress", url: "/progress", icon: BarChart3 }, // ✅ pour tous
+    { title: "Quizzes", url: "/quizzes", icon: BookOpen },
+    { title: "Projects", url: "/projects", icon: Code2 },
+    { title: "Formation", url: "/Formation", icon: GraduationCap },
+  ];
 
   // ✅ Ajouts spécifiques pour admin
   if (role === "admin") {

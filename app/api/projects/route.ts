@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import Project from "../../../models/Project";
 import connectDB from "../../../lib/mongo";
+import { Types } from "mongoose";
 
 export async function GET() {
   await connectDB();

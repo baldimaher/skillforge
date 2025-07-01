@@ -52,7 +52,6 @@ interface Props {
   projectTitle: string;
 }
 
-// Étapes par défaut à créer si aucune n'existe
 const DEFAULT_STEPS: CreateStepData[] = [
   { title: "Configuration environnement", priority: "high", hours: 2 },
   { title: "Analyse des exigences", priority: "high", hours: 3 },
@@ -78,7 +77,6 @@ export default function BackendProgressTracker({
 
   const handlePrint = () => window.print();
 
-  // Charger les étapes depuis le backend
   useEffect(() => {
     loadSteps();
   }, [projectId]);
@@ -89,7 +87,6 @@ export default function BackendProgressTracker({
       setError(null);
       const data = await stepsAPI.getSteps(projectId);
 
-      // Si aucune étape n'existe, créer les étapes par défaut
       if (data.length === 0) {
         await createDefaultSteps();
       } else {
@@ -117,7 +114,6 @@ export default function BackendProgressTracker({
     }
   };
 
-  // Mettre à jour une étape
   const updateStep = async (stepId: string, updates: UpdateStepData) => {
     try {
       const updatedStep = await stepsAPI.updateStep(projectId, stepId, updates);
@@ -130,7 +126,6 @@ export default function BackendProgressTracker({
     }
   };
 
-  // Ajouter une étape
   const addStep = async () => {
     if (!newStep.title.trim()) return;
 
@@ -145,7 +140,6 @@ export default function BackendProgressTracker({
     }
   };
 
-  // Supprimer une étape
   const deleteStep = async (stepId: string) => {
     try {
       await stepsAPI.deleteStep(projectId, stepId);
@@ -156,7 +150,6 @@ export default function BackendProgressTracker({
     }
   };
 
-  // Calculer les statistiques
   const stats = {
     total: steps.length,
     done: steps.filter((s) => s.status === "done").length,
@@ -169,7 +162,6 @@ export default function BackendProgressTracker({
 
   const progress = stats.total > 0 ? (stats.done / stats.total) * 100 : 0;
 
-  // Fonctions utilitaires
   const getStatusIcon = (status: Step["status"]) => {
     switch (status) {
       case "done":
@@ -322,7 +314,6 @@ export default function BackendProgressTracker({
       </CardHeader>
 
       <CardContent>
-        {/* Affichage des erreurs */}
         {error && (
           <Alert className="mb-4" variant="destructive">
             <AlertCircle className="h-4 w-4" />
@@ -330,7 +321,6 @@ export default function BackendProgressTracker({
           </Alert>
         )}
 
-        {/* Statistiques */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <Card>
             <CardContent className="p-4">
@@ -382,7 +372,6 @@ export default function BackendProgressTracker({
           </Card>
         </div>
 
-        {/* Barre de progression */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium">Progression globale</span>
@@ -398,7 +387,6 @@ export default function BackendProgressTracker({
           </div>
         </div>
 
-        {/* Tableau des étapes */}
         <Table>
           <TableHeader>
             <TableRow>
@@ -470,6 +458,16 @@ export default function BackendProgressTracker({
             ))}
           </TableBody>
         </Table>
+
+        {/* Message de projet terminé */}
+        {stats.total > 0 && stats.done === stats.total && (
+          <div className="mt-6 bg-green-100 text-green-800 border border-green-300 rounded-lg p-4 text-center flex items-center justify-center gap-2">
+            <CheckCircle className="w-6 h-6" />
+            <span className="font-semibold">
+              Félicitations ! Le projet <strong>"{projectTitle}"</strong> est terminé 🎉
+            </span>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
