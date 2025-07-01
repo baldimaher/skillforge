@@ -1,6 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  ArrowLeft,
+  Award,
+  BookOpen,
+  Calendar,
+  CheckCircle,
+  Clock,
+  Code2,
+  RefreshCw,
+  Star,
+  Target,
+  TrendingUp,
+  Trophy,
+  Users,
+  Zap,
+} from "lucide-react";
 import {
   Card,
   CardContent,
@@ -8,27 +24,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  BookOpen,
-  Code2,
-  Target,
-  CheckCircle,
-  Clock,
-  Award,
-  TrendingUp,
-  Calendar,
-  Star,
-  Trophy,
-  Zap,
-  Users,
-  ArrowLeft,
-  RefreshCw,
-} from "lucide-react";
 import Link from "next/link";
+import { Progress } from "@/components/ui/progress";
 
 interface User {
   _id: string;
@@ -106,7 +107,7 @@ export default function ProgressPage() {
       // Récupérer toutes les données en parallèle
       const [userRes, projectsRes, quizzesRes, formationsRes] =
         await Promise.all([
-          fetch(`/api/users/${userId}`),
+          fetch(`/api/user/${userId}`),
           fetch("/api/projects"),
           fetch("/api/quiz"),
           fetch("/api/Formation"),

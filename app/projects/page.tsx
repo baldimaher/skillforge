@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PlusCircle, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 
 // Type pour les projets

@@ -45,7 +45,8 @@ export async function POST(req: NextRequest) {
         firstName: user.firstName,
         role: user.role,
         projectsTaken: user.projectsTaken,
-        quizzes: user.quizzes
+        quizzes: user.quizzes,
+        certificates:user.certificates
       },
     });
 

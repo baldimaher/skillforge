@@ -42,27 +42,22 @@ export function AppSidebar() {
     }
   }, []);
 
-  // 👇 Construction dynamique du menu selon le rôle
-  const menuItems = [];
+  // ✅ Menu commun pour tous les rôles
+ const menuItems = [
+  { title: "Dashboard", url: "/dashboard", icon: Home },
+  { title: "Progress", url: "/progress", icon: BarChart3 },
+  { title: "Quizzes", url: "/quizzes", icon: BookOpen },
+  { title: "Projects", url: "/projects", icon: Code2 },
+  { title: "Formation", url: "/Formation", icon: GraduationCap },
+  { title: "Feedback", url: "/feedback", icon: Trophy }, // ✅ lien ajouté ici
+];
 
+  // ✅ Ajouts spécifiques pour admin
   if (role === "admin") {
     menuItems.push(
-      { title: "Dashboard", url: "/dashboard", icon: Home },
-      { title: "Quizzes", url: "/quizzes", icon: BookOpen },
-      { title: "Projects", url: "/projects", icon: Code2 },
-      { title: "Formation", url: "/Formation", icon: GraduationCap },
-      // 👇 exclure /progress
       { title: "Add Quiz", url: "/admin/addquiz", icon: PlusCircle },
       { title: "Add Project", url: "/admin/addproject", icon: PlusCircle },
       { title: "Add Formation", url: "/admin/addformation", icon: PlusCircle }
-    );
-  } else {
-    menuItems.push(
-      // 👇 exclure /dashboard
-      { title: "Progress", url: "/progress", icon: BarChart3 },
-      { title: "Quizzes", url: "/quizzes", icon: BookOpen },
-      { title: "Projects", url: "/projects", icon: Code2 },
-      { title: "Formation", url: "/Formation", icon: GraduationCap }
     );
   }
 
