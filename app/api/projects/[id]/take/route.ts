@@ -17,21 +17,32 @@ export async function POST(request: Request, { params }: Params) {
     const userId = body.userId; // idéalement récupéré via auth
 
     if (!userId) {
-      return NextResponse.json({ message: "Utilisateur non authentifié" }, { status: 401 });
+      return NextResponse.json(
+        { message: "Utilisateur non authentifié" },
+        { status: 401 }
+      );
     }
 
     const project = await Project.findById(projectId);
     if (!project) {
-      return NextResponse.json({ message: "Projet non trouvé" }, { status: 404 });
+      return NextResponse.json(
+        { message: "Projet non trouvé" },
+        { status: 404 }
+      );
     }
     if (project.takenBy) {
-      return NextResponse.json({ message: "Projet déjà pris" }, { status: 400 });
+      return NextResponse.json(
+        { message: "Projet déjà pris" },
+        { status: 400 }
+      );
     }
 
     project.takenBy = userId;
     await project.save();
 
-    await User.findByIdAndUpdate(userId, { $addToSet: { projectsTaken: projectId } });
+    await User.findByIdAndUpdate(userId, {
+      $addToSet: { projectsTaken: projectId },
+    });
 
     return NextResponse.json({ message: "Projet pris avec succès" });
   } catch (error) {
