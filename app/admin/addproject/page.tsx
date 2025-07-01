@@ -1,76 +1,77 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function AddProjectPage() {
   const [title, setTitle] = useState("");
   const [link, setLink] = useState("");
+  const [demoUrl, setDemoUrl] = useState("");
   const [description, setDescription] = useState("");
-  const [technologies, setTechnologies] = useState(""); // chaîne séparée par des virgules
+  const [technologies, setTechnologies] = useState("");
+  const [objectives, setObjectives] = useState("");
   const [status, setStatus] = useState("à venir");
   const [difficulty, setDifficulty] = useState("Beginner");
   const [duration, setDuration] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+
+  const userStr =
+    typeof window !== "undefined" ? localStorage.getItem("user") : null;
+  const user = userStr ? JSON.parse(userStr) : null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Convertir la chaîne technologies en tableau (trim pour enlever espaces)
     const techArray = technologies
       .split(",")
       .map((tech) => tech.trim())
       .filter((tech) => tech.length > 0);
 
+    const objArray = objectives
+      .split(";")
+      .map((o) => o.trim())
+      .filter((o) => o.length > 0);
+
     try {
-      const projectData: any = {
-        title,
-        description,
-        difficulty,
-        duration,
-        technologies: [],
-        objectives: [],
-        prerequisites: [],
-        resources: [],
-        githubUrl: link.trim(),
-        userId: "685aae1749f778ebfe83ce3a",
-      };
+      const res = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          description,
+          technologies: techArray,
+          objectives: objArray,
+          status,
+          difficulty,
+          duration,
+          githubUrl: link.trim(),
+          demoUrl: demoUrl.trim(),
+          userId: user?._id,
+        }),
+      });
 
-      if (link) projectData.githubUrl = link;
+      const data = await res.json();
 
-        const res = await fetch("/api/projects", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                title,
-                description,
-                technologies: techArray,
-                status,
-            }),
-        });
-
-        try {
-            const data = await res.json();
-
-            if (res.ok) {
-                alert("Projet ajouté !");
-                setTitle("");
-                setLink?.(""); // only if setLink is defined
-                setDescription("");
-                setDuration?.(""); // only if setDuration is defined
-                setTechnologies?.(""); // only if setTechnologies is defined
-                setStatus?.("à venir"); // only if setStatus is defined
-                setErrorMsg?.("");
-            } else {
-                if (data.errors) {
-                    setErrorMsg?.(data.errors.map((err: any) => err.message).join(" | "));
-                } else {
-                    setErrorMsg?.(data.message || "Erreur lors de l'ajout.");
-                    alert?.(data.message || "Erreur lors de l'ajout.");
-                }
-            }
-        } catch (error) {
-            console.error("Erreur:", error);
-        }
+      if (res.ok) {
+        setSuccessMsg("Projet ajouté avec succès !");
+        setTitle("");
+        setLink("");
+        setDemoUrl("");
+        setDescription("");
+        setDuration("");
+        setTechnologies("");
+        setObjectives("");
+        setStatus("à venir");
+        setDifficulty("Beginner");
+        setErrorMsg("");
+      } else {
+        setErrorMsg(data.message || "Erreur lors de l'ajout.");
+      }
+    } catch (error) {
+      console.error("Erreur:", error);
+      setErrorMsg("Erreur réseau ou serveur.");
+    }
+  };
 
   return (
     <div className="max-w-xl mx-auto mt-10 p-4 bg-white rounded shadow">
@@ -78,6 +79,11 @@ export default function AddProjectPage() {
       {errorMsg && (
         <div className="bg-red-100 text-red-700 px-3 py-2 rounded mb-2">
           {errorMsg}
+        </div>
+      )}
+      {successMsg && (
+        <div className="bg-green-100 text-green-700 px-3 py-2 rounded mb-2">
+          {successMsg}
         </div>
       )}
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -91,9 +97,16 @@ export default function AddProjectPage() {
         />
         <input
           type="url"
-          placeholder="Lien du projet (GitHub, site...)"
+          placeholder="Lien GitHub"
           value={link}
           onChange={(e) => setLink(e.target.value)}
+          className="w-full border px-3 py-2 rounded"
+        />
+        <input
+          type="url"
+          placeholder="Lien de démo"
+          value={demoUrl}
+          onChange={(e) => setDemoUrl(e.target.value)}
           className="w-full border px-3 py-2 rounded"
         />
         <textarea
@@ -103,46 +116,52 @@ export default function AddProjectPage() {
           className="w-full border px-3 py-2 rounded"
           required
         />
-          <select
-              value={difficulty}
-              onChange={(e) => setDifficulty(e.target.value)}
-              className="w-full border px-3 py-2 rounded"
-              required
-          >
-              <option value="Beginner">Débutant</option>
-              <option value="Intermediate">Intermédiaire</option>
-              <option value="Advanced">Avancé</option>
-          </select>
+        <textarea
+          placeholder="Objectifs (séparés par ;) ex: Apprendre React;Maîtriser les hooks"
+          value={objectives}
+          onChange={(e) => setObjectives(e.target.value)}
+          className="w-full border px-3 py-2 rounded"
+        />
         <input
           type="text"
-          placeholder="Technologies (séparées par des virgules)"
+          placeholder="Technologies (ex: React, Node.js)"
           value={technologies}
           onChange={(e) => setTechnologies(e.target.value)}
           className="w-full border px-3 py-2 rounded"
         />
-          <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="w-full border px-3 py-2 rounded"
-          >
-              <option value="à venir">À venir</option>
-              <option value="en cours">En cours</option>
-              <option value="terminé">Terminé</option>
-          </select>
-          <input
-              type="text"
-              placeholder="Durée estimée (ex: 2 semaines)"
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-              className="w-full border px-3 py-2 rounded"
-              required
-          />
-          <button
-              type="submit"
-              className="bg-green-600 text-white px-4 py-2 rounded"
-          >
-              Ajouter
-          </button>
+        <select
+          value={difficulty}
+          onChange={(e) => setDifficulty(e.target.value)}
+          className="w-full border px-3 py-2 rounded"
+          required
+        >
+          <option value="Beginner">Débutant</option>
+          <option value="Intermediate">Intermédiaire</option>
+          <option value="Advanced">Avancé</option>
+        </select>
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          className="w-full border px-3 py-2 rounded"
+        >
+          <option value="à venir">À venir</option>
+          <option value="en cours">En cours</option>
+          <option value="terminé">Terminé</option>
+        </select>
+        <input
+          type="text"
+          placeholder="Durée estimée (ex: 2 semaines)"
+          value={duration}
+          onChange={(e) => setDuration(e.target.value)}
+          className="w-full border px-3 py-2 rounded"
+          required
+        />
+        <button
+          type="submit"
+          className="bg-green-600 text-white px-4 py-2 rounded"
+        >
+          Ajouter
+        </button>
       </form>
     </div>
   );
