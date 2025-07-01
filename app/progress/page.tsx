@@ -148,10 +148,13 @@ export default function ProgressPage() {
     ? user.quizzes.reduce((acc, q) => acc + q.score, 0) / user.quizzes.length
     : 0;
 
+  const projectProgress =
+    Math.round((userProjects.length / projects.length) * 100) || 0;
+
   const totalProgress =
     Math.round(
       ((completedProjects.length + completedQuizzes) /
-        (userProjects.length + quizzes.length)) *
+        (projects.length + quizzes.length)) *
         100
     ) || 0;
 
@@ -255,7 +258,17 @@ export default function ProgressPage() {
             >
               {/* Progress Overview */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+                <motion.div
+                  key="projects"
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1, type: "spring" }}
+                  whileHover={{
+                    scale: 1.04,
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
+                  }}
+                  className="rounded-2xl shadow-xl bg-gradient-to-br from-blue-500 to-blue-600 p-6 flex flex-col items-center text-white relative overflow-hidden"
+                >
                   <CardHeader className="pb-2">
                     <CardTitle className="flex items-center text-lg">
                       <Code2 className="w-5 h-5 mr-2" />
@@ -264,20 +277,27 @@ export default function ProgressPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-3xl font-bold mb-2">
-                      {completedProjects.length}/{userProjects.length}
+                      {userProjects.length} / {projects.length} projets pris
                     </div>
                     <Progress
-                      value={
-                        (completedProjects.length / userProjects.length) *
-                          100 || 0
-                      }
+                      value={projectProgress}
                       className="h-2 bg-blue-400"
                     />
                     <p className="text-blue-100 text-sm mt-2">Terminés</p>
                   </CardContent>
-                </Card>
+                </motion.div>
 
-                <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white">
+                <motion.div
+                  key="quizzes"
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2, type: "spring" }}
+                  whileHover={{
+                    scale: 1.04,
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
+                  }}
+                  className="rounded-2xl shadow-xl bg-gradient-to-br from-green-500 to-green-600 p-6 flex flex-col items-center text-white relative overflow-hidden"
+                >
                   <CardHeader className="pb-2">
                     <CardTitle className="flex items-center text-lg">
                       <BookOpen className="w-5 h-5 mr-2" />
@@ -294,9 +314,19 @@ export default function ProgressPage() {
                     />
                     <p className="text-green-100 text-sm mt-2">Réussis</p>
                   </CardContent>
-                </Card>
+                </motion.div>
 
-                <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white">
+                <motion.div
+                  key="averageQuizScore"
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3, type: "spring" }}
+                  whileHover={{
+                    scale: 1.04,
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
+                  }}
+                  className="rounded-2xl shadow-xl bg-gradient-to-br from-purple-500 to-purple-600 p-6 flex flex-col items-center text-white relative overflow-hidden"
+                >
                   <CardHeader className="pb-2">
                     <CardTitle className="flex items-center text-lg">
                       <Star className="w-5 h-5 mr-2" />
@@ -312,9 +342,19 @@ export default function ProgressPage() {
                       Performance
                     </div>
                   </CardContent>
-                </Card>
+                </motion.div>
 
-                <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white">
+                <motion.div
+                  key="totalProgress"
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4, type: "spring" }}
+                  whileHover={{
+                    scale: 1.04,
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
+                  }}
+                  className="rounded-2xl shadow-xl bg-gradient-to-br from-orange-500 to-orange-600 p-6 flex flex-col items-center text-white relative overflow-hidden"
+                >
                   <CardHeader className="pb-2">
                     <CardTitle className="flex items-center text-lg">
                       <Trophy className="w-5 h-5 mr-2" />
@@ -331,7 +371,7 @@ export default function ProgressPage() {
                     />
                     <p className="text-orange-100 text-sm mt-2">Global</p>
                   </CardContent>
-                </Card>
+                </motion.div>
               </div>
 
               {/* Recent Activity */}

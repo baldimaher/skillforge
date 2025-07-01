@@ -32,17 +32,12 @@ export default function LoginPage() {
         localStorage.setItem("lastName", fullUser.lastName);
         localStorage.setItem("userName", fullUser.firstName);
         localStorage.setItem("userRole", fullUser.role);
-        localStorage.setItem("ProjecTaken", fullUser.projectsTaken || []);
-        localStorage.setItem("quizzes", fullUser.quizzes || []);
-      localStorage.setItem("certificates", fullUser.certificates
- || []);
+        localStorage.setItem("ProjecTaken", JSON.stringify(fullUser.projectsTaken || []));
+        localStorage.setItem("quizzes", JSON.stringify(fullUser.quizzes || []));
+        localStorage.setItem("certificates", JSON.stringify(fullUser.certificates || []));
 
-        // 🎯 Redirection selon le rôle
-        if (fullUser.role === "admin") {
-          router.push("/dashboard"); // page admin
-        } else {
-          router.push("/progress"); // page utilisateur
-        }
+        // ✅ Redirection vers /dashboard pour tous
+        router.push("/dashboard");
       } else {
         setError(data.message || "Erreur lors de la connexion");
       }
@@ -59,11 +54,7 @@ export default function LoginPage() {
       <div className="flex w-full max-w-5xl bg-white rounded-3xl shadow-lg overflow-hidden">
         {/* Illustration */}
         <div className="hidden md:flex w-1/2 bg-gradient-to-tr from-indigo-500 to-purple-600 items-center justify-center p-10">
-          <img
-            src="/login.jpg"
-            className="w-full max-w-md"
-            alt="Illustration de connexion"
-          />
+          <img src="/login.jpg" className="w-full max-w-md" alt="Illustration de connexion" />
         </div>
 
         {/* Formulaire */}
@@ -83,7 +74,6 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
             />
-
             <input
               type="password"
               placeholder="Mot de passe"
@@ -92,7 +82,6 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
-
             <div className="flex items-center justify-between text-sm text-gray-600">
               <label className="flex items-center gap-2">
                 <input type="checkbox" className="accent-indigo-500" />
@@ -102,7 +91,6 @@ export default function LoginPage() {
                 Mot de passe oublié ?
               </a>
             </div>
-
             <button
               type="submit"
               disabled={loading}
