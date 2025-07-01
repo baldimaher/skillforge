@@ -32,8 +32,17 @@ export default function LoginPage() {
         localStorage.setItem("lastName", fullUser.lastName);
         localStorage.setItem("userName", fullUser.firstName);
         localStorage.setItem("userRole", fullUser.role);
+        localStorage.setItem("ProjecTaken", fullUser.projectsTaken || []);
+        localStorage.setItem("quizzes", fullUser.quizzes || []);
+      localStorage.setItem("certificates", fullUser.certificates
+ || []);
 
-        router.push("/dashboard");
+        // 🎯 Redirection selon le rôle
+        if (fullUser.role === "admin") {
+          router.push("/dashboard"); // page admin
+        } else {
+          router.push("/progress"); // page utilisateur
+        }
       } else {
         setError(data.message || "Erreur lors de la connexion");
       }
@@ -59,7 +68,9 @@ export default function LoginPage() {
 
         {/* Formulaire */}
         <div className="w-full md:w-1/2 p-8 sm:p-10 lg:p-14 space-y-6">
-          <h2 className="text-3xl font-bold text-indigo-700 text-center">Bonjour, bienvenue à nouveau</h2>
+          <h2 className="text-3xl font-bold text-indigo-700 text-center">
+            Bonjour, bienvenue à nouveau
+          </h2>
 
           {error && <p className="text-red-500 text-center">{error}</p>}
 
@@ -87,7 +98,9 @@ export default function LoginPage() {
                 <input type="checkbox" className="accent-indigo-500" />
                 Se souvenir de moi
               </label>
-              <a href="#" className="hover:underline text-indigo-600">Mot de passe oublié ?</a>
+              <a href="#" className="hover:underline text-indigo-600">
+                Mot de passe oublié ?
+              </a>
             </div>
 
             <button
@@ -105,10 +118,10 @@ export default function LoginPage() {
 
           <p className="text-center text-sm text-gray-600">
             Vous n'avez pas de compte ?{" "}
-            <a href="/signup" className="text-indigo-600 hover:underline font-medium">Cliquez ici</a>
+            <a href="/signup" className="text-indigo-600 hover:underline font-medium">
+              Cliquez ici
+            </a>
           </p>
-
-       
         </div>
       </div>
     </div>

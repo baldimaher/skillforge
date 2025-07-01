@@ -3,26 +3,36 @@ import { NextRequest, NextResponse } from "next/server";
 import User from "../../../../../models/User";
 import dbConnect from "../../../../../lib/mongo";
 
-export async function POST(req: NextRequest, context: { params: Promise<{ _id: string }> }) {
+export async function POST(req: NextRequest, context: { params: { _id: string } }) {
   await dbConnect();
 
-  const params = await context.params;
-  const quizId = params._id;
+  const quizId = context.params._id;
 
-  const { userId, score, answers } = await req.json(); // Remplace `title` par `answers` si nécessaire
+  const { userId, score, title } = await req.json();
+
+  if (!userId || !score || !title) {
+    return NextResponse.json(
+      { message: "Données manquantes" },
+      { status: 400 }
+    );
+  }
 
   try {
     const user = await User.findById(userId);
     if (!user) {
-      return NextResponse.json({ message: "Utilisateur non trouvé" }, { status: 404 });
+      return NextResponse.json(
+        { message: "Utilisateur non trouvé" },
+        { status: 404 }
+      );
     }
 
     if (!Array.isArray(user.quizzes)) {
       user.quizzes = [];
     }
 
-    const existingAttempt = user.quizzes.find((entry: any) =>
-      entry.quiz && entry.quiz.toString() === quizId
+    const existingAttempt = user.quizzes.find(
+      (entry: any) =>
+        entry.quiz && entry.quiz.toString() === quizId
     );
 
     if (existingAttempt) {
@@ -40,6 +50,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ _id: s
 
     user.quizzes.push({
       quiz: quizId,
+      title,
       score,
       date: new Date(),
     });
@@ -49,6 +60,9 @@ export async function POST(req: NextRequest, context: { params: Promise<{ _id: s
     return NextResponse.json({ message: "Score sauvegardé avec succès" });
   } catch (err) {
     console.error(err);
-    return NextResponse.json({ message: "Erreur lors de la sauvegarde" }, { status: 500 });
+    return NextResponse.json(
+      { message: "Erreur lors de la sauvegarde" },
+      { status: 500 }
+    );
   }
 }
