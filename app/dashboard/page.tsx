@@ -242,13 +242,13 @@ export default function DashboardPage() {
               <div>
                 <label className="block mb-1 font-medium">Projets pris</label>
                 <div className="w-full bg-gray-200 rounded-full h-5">
-                  <div
-                    className="bg-indigo-600 h-5 rounded-full transition-all"
-                    style={{
-                      width: `${(stats?.projects / 20) * 100}%`,
-                      maxWidth: "100%",
-                    }}
-                  />
+                <div
+  className="bg-indigo-600 h-5 rounded-full transition-all"
+  style={{
+    width: `${((stats?.projects ?? 0) / 20) * 100}%`,
+    maxWidth: "100%",
+  }}
+/>
                 </div>
               </div>
               <div>
@@ -256,13 +256,13 @@ export default function DashboardPage() {
                   Quiz disponibles
                 </label>
                 <div className="w-full bg-gray-200 rounded-full h-5">
-                  <div
-                    className="bg-green-600 h-5 rounded-full transition-all"
-                    style={{
-                      width: `${(stats?.quizzes / 50) * 100}%`,
-                      maxWidth: "100%",
-                    }}
-                  />
+                <div
+  className="bg-green-600 h-5 rounded-full transition-all"
+  style={{
+    width: `${((stats?.quizzes ?? 0) / 50) * 100}%`,
+    maxWidth: "100%",
+  }}
+/>
                 </div>
               </div>
             </div>
