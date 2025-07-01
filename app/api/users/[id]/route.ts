@@ -11,9 +11,12 @@ export async function GET(_req: Request, { params }: Params) {
   try {
     const user = await User.findById(params.id).lean();
     if (!user) {
-      return NextResponse.json({ message: "Utilisateur non trouvé" }, { status: 404 });
+      return NextResponse.json(
+        { message: "Utilisateur non trouvé" },
+        { status: 404 }
+      );
     }
-    
+
     // Retourner les données utilisateur sans le mot de passe
     const { password, ...userData } = user;
     return NextResponse.json(userData);
@@ -21,4 +24,4 @@ export async function GET(_req: Request, { params }: Params) {
     console.error("Erreur lors de la récupération de l'utilisateur:", error);
     return NextResponse.json({ message: "Erreur serveur" }, { status: 500 });
   }
-} 
+}
