@@ -19,36 +19,49 @@ export default function ProfilPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Chargement du profil au montage
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      try {
-        const userObj = JSON.parse(storedUser);
-        if (userObj?.email) {
-          setEmail(userObj.email);
-          setRole(userObj.role || "user");
+useEffect(() => {
+  const storedUser = localStorage.getItem("user");
+  if (storedUser) {
+    try {
+      const userObj = JSON.parse(storedUser);
+      if (userObj?.email) {
+        setEmail(userObj.email);
+        setRole(userObj.role || "user");
 
-          fetch("/api/user", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: userObj.email }),
+        fetch("/api/user", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: userObj.email }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            setSkills(data.skills || []);
+
+            if (data.cvUrl) {
+              setCvUrl(data.cvUrl);
+              localStorage.setItem("cvUrl", data.cvUrl);
+            } else {
+              // si pas de cvUrl serveur, fallback sur localStorage
+              const localCvUrl = localStorage.getItem("cvUrl");
+              if (localCvUrl) setCvUrl(localCvUrl);
+            }
           })
-            .then((res) => res.json())
-            .then((data) => {
-              setSkills(data.skills || []);
-              setCvUrl(data.cvUrl || null);
-            })
-            .catch(() => setError("Erreur lors du chargement du profil."));
-        } else {
-          setError("Email manquant dans les données.");
-        }
-      } catch {
-        setError("Erreur de parsing localStorage.");
+          .catch(() => {
+            const localCvUrl = localStorage.getItem("cvUrl");
+            if (localCvUrl) setCvUrl(localCvUrl);
+            setError("Erreur lors du chargement du profil.");
+          });
+      } else {
+        setError("Email manquant dans les données.");
       }
-    } else {
-      setError("Utilisateur non connecté.");
+    } catch {
+      setError("Erreur de parsing localStorage.");
     }
-  }, []);
+  } else {
+    setError("Utilisateur non connecté.");
+  }
+}, []);
+
 
   // Chargement des formations recommandées selon compétences
   useEffect(() => {
@@ -244,19 +257,19 @@ export default function ProfilPage() {
             <h3 className="text-xl font-semibold text-gray-800">📂 Mes données</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <a
-                href="/projects"
+                href="/user/Mesproject"
                 className="block bg-indigo-100 hover:bg-indigo-200 text-indigo-800 text-center py-3 rounded-xl shadow font-semibold transition"
               >
                 🚀 Mes Projets
               </a>
               <a
-                href="/certificates"
+                href="/user/mes-certificats"
                 className="block bg-green-100 hover:bg-green-200 text-green-800 text-center py-3 rounded-xl shadow font-semibold transition"
               >
                 🎓 Mes Certificats
               </a>
               <a
-                href="/quiz"
+                href="user/MesQuiz"
                 className="block bg-purple-100 hover:bg-purple-200 text-purple-800 text-center py-3 rounded-xl shadow font-semibold transition"
               >
                 🧠 Mes Quiz

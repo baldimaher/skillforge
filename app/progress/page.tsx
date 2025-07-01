@@ -1,527 +1,349 @@
-"use client";
+'use client';
 
-import {
-  BookOpen,
-  Code2,
-  FileText,
-  Target,
-  CheckCircle,
-  Clock,
-  TrendingUp,
-  Award,
-  Star,
-  Zap,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { useEffect, useState } from "react";
-
-interface UserProgressData {
-  user: {
-    email: string;
-    firstName: string;
-    lastName: string;
-    skills: string[];
-    cvUrl?: string;
-  };
-  statistics: {
-    completedQuizzes: number;
-    passedQuizzes: number;
-    averageScore: number;
-    totalXP: number;
-  };
-  quizResults: Array<{
-    quizId: string;
-    quizTitle: string;
-    score: number;
-    passed: boolean;
-    completedAt: string;
-    difficulty: string;
-  }>;
-}
+import { AnimatePresence, motion } from 'framer-motion';
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import React, { useEffect, useState } from 'react';
 
 interface Project {
   _id: string;
   title: string;
-  difficulty: string;
-  technologies: string[];
-  createdAt: string;
+  description: string;
+  technologies?: string[];
+  status?: string;
+  takenBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface Quiz {
-  _id: string;
+  quiz: string;
+  score: number;
+  date: string;
   title: string;
-  difficulty: string;
-  category: string;
 }
 
-export default function ProgressPage() {
-  const [userProgress, setUserProgress] = useState<UserProgressData | null>(
-    null
-  );
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [allQuizzes, setAllQuizzes] = useState<Quiz[]>([]);
+interface UserProgress {
+  projectsTaken: Project[];
+  quizzes: Quiz[];
+}
+
+interface QuizGroup {
+  title: string;
+  attempts: { score: number; date: string }[];
+  trend: string;
+  averageScore: number;
+}
+
+export default function UserProgressPage() {
+  const [data, setData] = useState<UserProgress | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [quizGroups, setQuizGroups] = useState<QuizGroup[]>([]);
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Récupérer l'email depuis localStorage
-        let userEmail = localStorage.getItem("email");
-
-        if (!userEmail) {
-          const userObj = localStorage.getItem("user");
-          if (userObj) {
-            try {
-              const parsedUser = JSON.parse(userObj);
-              userEmail = parsedUser.email;
-            } catch (e) {
-              console.error("Erreur parsing user object:", e);
-            }
-          }
-        }
-
-        if (!userEmail) {
-          setError("Aucun utilisateur connecté. Veuillez vous reconnecter.");
-          setLoading(false);
-          return;
-        }
-
-        // Récupérer les données utilisateur
-        const userResponse = await fetch("/api/user", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: userEmail }),
-        });
-
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          setUserProgress(userData);
-        } else {
-          setError("Erreur lors du chargement des données utilisateur");
-        }
-
-        // Récupérer les projets et quiz
-        const [projectsRes, quizzesRes] = await Promise.all([
-          fetch("/api/projects"),
-          fetch("/api/quiz"),
-        ]);
-
-        if (projectsRes.ok) {
-          const projectsData = await projectsRes.json();
-          setProjects(projectsData);
-        }
-
-        if (quizzesRes.ok) {
-          const quizzesData = await quizzesRes.json();
-          setAllQuizzes(quizzesData);
-        }
-      } catch (error) {
-        console.error("Erreur lors du chargement des données:", error);
-        setError("Erreur de connexion");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUserId(JSON.parse(storedUser)._id);
+    } else {
+      setError('Utilisateur non connecté');
+      setLoading(false);
+    }
   }, []);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="relative">
-            <div className="w-20 h-20 border-4 border-blue-200 rounded-full animate-spin border-t-blue-600 mx-auto mb-4"></div>
-            <div className="absolute inset-0 w-20 h-20 border-4 border-purple-200 rounded-full animate-ping mx-auto"></div>
-          </div>
-          <p className="text-slate-600 text-lg font-medium">
-            Chargement de vos données...
-          </p>
-          <p className="text-slate-400 text-sm mt-2">
-            Préparation de votre tableau de bord
-          </p>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!userId) return;
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto">
-          <div className="bg-white rounded-2xl p-8 shadow-xl">
-            <FileText className="h-16 w-16 mx-auto mb-4 text-red-400" />
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">Oops !</h2>
-            <p className="text-slate-600 mb-6">{error}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
-            >
-              Réessayer
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+    fetch(`/api/user-progress?userId=${userId}`)
+      .then(res => {
+        if (!res.ok) throw new Error('Erreur lors de la récupération des données');
+        return res.json();
+      })
+      .then(json => {
+        setData(json);
+        setLoading(false);
 
-  const stats = userProgress?.statistics || {
-    completedQuizzes: 0,
-    passedQuizzes: 0,
-    averageScore: 0,
-    totalXP: 0,
-  };
+        // Explicitly type the accumulator
+        const groupedQuizzes: { [key: string]: Quiz[] } = json.quizzes.reduce(
+          (acc: { [key: string]: Quiz[] }, quiz: Quiz) => {
+            acc[quiz.title] = acc[quiz.title] || [];
+            acc[quiz.title].push(quiz);
+            return acc;
+          },
+          {}
+        );
 
-  const userData = userProgress?.user;
-  const totalQuizzes = allQuizzes.length;
-  const recentQuizzes = Array.isArray(userProgress?.quizResults)
-    ? userProgress.quizResults.slice(0, 5)
-    : [];
+        const quizGroups: QuizGroup[] = Object.entries(groupedQuizzes).map(([title, attempts]) => {
+          // Ensure attempts is typed as Quiz[]
+          const sortedAttempts = (attempts as Quiz[])
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+            .map(quiz => ({ score: quiz.score, date: quiz.date }));
 
-  // Calculer le niveau
-  const getLevel = (xp: number) => {
-    if (xp >= 2000)
-      return {
-        name: "Expert",
-        color: "from-yellow-400 to-orange-500",
-        icon: "👑",
-      };
-    if (xp >= 1000)
-      return {
-        name: "Avancé",
-        color: "from-purple-400 to-pink-500",
-        icon: "🚀",
-      };
-    if (xp >= 500)
-      return {
-        name: "Intermédiaire",
-        color: "from-blue-400 to-cyan-500",
-        icon: "⭐",
-      };
-    return {
-      name: "Débutant",
-      color: "from-green-400 to-emerald-500",
-      icon: "🌱",
-    };
-  };
+          let trend = 'Stable';
+          if (sortedAttempts.length > 1) {
+            const latestScore = sortedAttempts[sortedAttempts.length - 1].score;
+            const previousScore = sortedAttempts[sortedAttempts.length - 2].score;
+            trend = latestScore > previousScore ? 'Progression' : latestScore < previousScore ? 'Régresse' : 'Stable';
+          }
 
-  const currentLevel = getLevel(stats.totalXP);
+          const averageScore =
+            sortedAttempts.length > 0
+              ? sortedAttempts.reduce((sum, attempt) => sum + attempt.score, 0) / sortedAttempts.length
+              : 0;
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      <div className="container mx-auto px-4 py-8 space-y-8">
-        {/* En-tête Hero avec design moderne */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 rounded-3xl p-8 text-white shadow-2xl">
-          {/* Motifs décoratifs animés */}
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute top-0 left-0 w-40 h-40 bg-white rounded-full -translate-x-20 -translate-y-20 animate-pulse"></div>
-            <div className="absolute bottom-0 right-0 w-32 h-32 bg-white rounded-full translate-x-16 translate-y-16 animate-bounce"></div>
-            <div className="absolute top-1/2 right-1/4 w-24 h-24 bg-white rounded-full animate-ping"></div>
-          </div>
+          return { title, attempts: sortedAttempts, trend, averageScore };
+        });
 
-          <div className="relative z-10 flex items-center justify-between">
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm border border-white/30">
-                  <span className="text-3xl">👋</span>
-                </div>
-                <div>
-                  <h1 className="text-4xl font-bold mb-2">
-                    Salut {userData?.firstName || "Utilisateur"} !
-                  </h1>
-                  <p className="text-blue-100 text-xl">
-                    Continuez votre parcours d'apprentissage
-                  </p>
-                </div>
-              </div>
-            </div>
+        setQuizGroups(quizGroups);
+      })
+      .catch(err => {
+        setError(err.message);
+        setLoading(false);
+      });
+  }, [userId]);
 
-            <div className="text-right space-y-4">
-              <div className="bg-white/20 backdrop-blur-sm rounded-3xl p-6 border border-white/30">
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="text-2xl">{currentLevel.icon}</span>
-                  <div>
-                    <div className="text-4xl font-bold">{stats.totalXP}</div>
-                    <p className="text-blue-100 text-sm uppercase tracking-wide">
-                      Points XP
-                    </p>
-                  </div>
-                </div>
-                <div
-                  className={`inline-block px-4 py-2 rounded-full bg-gradient-to-r ${currentLevel.color} text-white text-sm font-medium shadow-lg`}
-                >
-                  Niveau {currentLevel.name}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Statistiques principales avec design moderne */}
-        <div className="grid gap-6 md:grid-cols-3">
-          {/* Quiz Complétés */}
-          <div className="group hover:scale-105 transition-all duration-300">
-            <Card className="border-0 shadow-lg hover:shadow-2xl bg-gradient-to-br from-green-50 to-emerald-100 overflow-hidden relative">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-full -translate-y-16 translate-x-16"></div>
-              <CardContent className="p-6 relative z-10">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="p-3 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl shadow-lg">
-                    <BookOpen className="h-6 w-6 text-white" />
-                  </div>
-                  <div className="text-right">
-                    <div className="text-3xl font-bold text-green-900">
-                      {stats.completedQuizzes}
-                    </div>
-                    <p className="text-sm text-green-600 font-medium">
-                      Quiz Complétés
-                    </p>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <p className="text-sm text-green-700">
-                    sur {totalQuizzes} disponibles
-                  </p>
-                  <div className="w-full bg-green-200 rounded-full h-3 overflow-hidden">
-                    <div
-                      className="bg-gradient-to-r from-green-500 to-emerald-600 h-3 rounded-full transition-all duration-1000 ease-out"
-                      style={{
-                        width: `${
-                          totalQuizzes > 0
-                            ? (stats.completedQuizzes / totalQuizzes) * 100
-                            : 0
-                        }%`,
-                      }}
-                    ></div>
-                  </div>
-                  <div className="flex justify-between text-xs text-green-600">
-                    <span>Progression</span>
-                    <span>
-                      {totalQuizzes > 0
-                        ? Math.round(
-                            (stats.completedQuizzes / totalQuizzes) * 100
-                          )
-                        : 0}
-                      %
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Score Moyen */}
-          <div className="group hover:scale-105 transition-all duration-300">
-            <Card className="border-0 shadow-lg hover:shadow-2xl bg-gradient-to-br from-purple-50 to-violet-100 overflow-hidden relative">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full -translate-y-16 translate-x-16"></div>
-              <CardContent className="p-6 relative z-10">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="p-3 bg-gradient-to-r from-purple-500 to-violet-600 rounded-2xl shadow-lg">
-                    <Target className="h-6 w-6 text-white" />
-                  </div>
-                  <div className="text-right">
-                    <div className="text-3xl font-bold text-purple-900">
-                      {stats.averageScore}%
-                    </div>
-                    <p className="text-sm text-purple-600 font-medium">
-                      Score Moyen
-                    </p>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <p className="text-sm text-purple-700">
-                    {stats.passedQuizzes} quiz réussis
-                  </p>
-                  <div className="w-full bg-purple-200 rounded-full h-3 overflow-hidden">
-                    <div
-                      className="bg-gradient-to-r from-purple-500 to-violet-600 h-3 rounded-full transition-all duration-1000 ease-out"
-                      style={{ width: `${stats.averageScore}%` }}
-                    ></div>
-                  </div>
-                  <div className="flex justify-between text-xs text-purple-600">
-                    <span>Performance</span>
-                    <span>
-                      {stats.averageScore >= 80
-                        ? "Excellent"
-                        : stats.averageScore >= 60
-                        ? "Bien"
-                        : "À améliorer"}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Projets */}
-          <div className="group hover:scale-105 transition-all duration-300">
-            <Card className="border-0 shadow-lg hover:shadow-2xl bg-gradient-to-br from-orange-50 to-amber-100 overflow-hidden relative">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full -translate-y-16 translate-x-16"></div>
-              <CardContent className="p-6 relative z-10">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="p-3 bg-gradient-to-r from-orange-500 to-amber-600 rounded-2xl shadow-lg">
-                    <Code2 className="h-6 w-6 text-white" />
-                  </div>
-                  <div className="text-right">
-                    <div className="text-3xl font-bold text-orange-900">
-                      {projects.length}
-                    </div>
-                    <p className="text-sm text-orange-600 font-medium">
-                      Projets
-                    </p>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <p className="text-sm text-orange-700">projets disponibles</p>
-                  <div className="flex gap-1 flex-wrap">
-                    {[...Array(Math.min(projects.length, 8))].map((_, i) => (
-                      <div
-                        key={i}
-                        className="w-3 h-3 bg-gradient-to-r from-orange-500 to-amber-600 rounded-full animate-pulse"
-                        style={{ animationDelay: `${i * 0.1}s` }}
-                      ></div>
-                    ))}
-                    {projects.length > 8 && (
-                      <span className="text-xs text-orange-600 ml-1 font-medium">
-                        +{projects.length - 8}
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs text-orange-600">
-                    <span>Explorez de nouveaux défis !</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* Activité récente avec design moderne */}
-        {recentQuizzes.length > 0 && (
-          <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-gradient-to-r from-blue-500 to-cyan-600 rounded-xl">
-                  <Clock className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl font-bold text-slate-900">
-                    Activité Récente
-                  </CardTitle>
-                  <CardDescription className="text-slate-600">
-                    Vos derniers quiz complétés
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentQuizzes.map((quiz, index) => (
-                  <div
-                    key={index}
-                    className="group flex items-center justify-between p-4 bg-gradient-to-r from-slate-50 to-blue-50 rounded-2xl hover:from-blue-50 hover:to-indigo-50 transition-all duration-300 border border-slate-200/50"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div
-                        className={`p-3 rounded-2xl shadow-lg ${
-                          quiz.passed
-                            ? "bg-gradient-to-r from-green-500 to-emerald-600"
-                            : "bg-gradient-to-r from-red-500 to-rose-600"
-                        }`}
-                      >
-                        {quiz.passed ? (
-                          <CheckCircle className="h-5 w-5 text-white" />
-                        ) : (
-                          <Clock className="h-5 w-5 text-white" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-slate-900 group-hover:text-blue-900 transition-colors">
-                          {quiz.quizTitle}
-                        </p>
-                        <p className="text-sm text-slate-500">
-                          {new Date(quiz.completedAt).toLocaleDateString(
-                            "fr-FR",
-                            {
-                              day: "numeric",
-                              month: "long",
-                              year: "numeric",
-                            }
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right space-y-1">
-                      <div className="text-2xl font-bold text-slate-900">
-                        {quiz.score}%
-                      </div>
-                      <Badge
-                        variant={quiz.passed ? "default" : "destructive"}
-                        className={`text-xs font-medium ${
-                          quiz.passed
-                            ? "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
-                            : "bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700"
-                        }`}
-                      >
-                        {quiz.passed ? "✓ Réussi" : "✗ Échoué"}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Compétences CV avec design moderne */}
-        {userData?.skills && userData.skills.length > 0 && (
-          <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl">
-                  <Award className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl font-bold text-slate-900">
-                    Vos Compétences
-                  </CardTitle>
-                  <CardDescription className="text-slate-600">
-                    {userData.skills.length} technologies extraites de votre CV
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-3">
-                {userData.skills.map((skill, index) => (
-                  <div key={index} className="group relative">
-                    <Badge
-                      variant="outline"
-                      className="text-sm py-2 px-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-200 text-indigo-700 hover:from-indigo-100 hover:to-purple-100 hover:border-indigo-300 transition-all duration-300 font-medium shadow-sm hover:shadow-md transform hover:scale-105"
-                    >
-                      <span className="mr-2">⚡</span>
-                      {skill}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl border border-indigo-100">
-                <p className="text-sm text-indigo-700 text-center font-medium">
-                  🎯 Continuez à développer vos compétences avec nos quiz et
-                  projets !
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+  if (loading) return (
+    <div className="flex justify-center items-center min-h-screen">
+      <motion.p
+        className="text-lg font-semibold text-indigo-600"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        Chargement...
+      </motion.p>
     </div>
+  );
+
+  if (error) return (
+    <div className="flex justify-center items-center min-h-screen">
+      <motion.p
+        className="text-lg font-semibold text-red-600"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        Erreur : {error}
+      </motion.p>
+    </div>
+  );
+
+  if (!data) return (
+    <div className="flex justify-center items-center min-h-screen">
+      <motion.p
+        className="text-lg font-semibold text-gray-600"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        Aucune donnée à afficher.
+      </motion.p>
+    </div>
+  );
+  return (
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 bg-gray-50 min-h-screen">
+    
+      {/* Projects Section */}
+      <section className="mb-12">
+        <motion.h1
+          className="text-3xl font-bold text-indigo-700 mb-6 border-b-2 border-indigo-200 pb-2"
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          Projets pris en charge ({data.projectsTaken.length})
+        </motion.h1>
+        {data.projectsTaken.length === 0 ? (
+          <motion.p
+            className="text-center text-gray-600 text-lg"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            Aucun projet
+          </motion.p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <AnimatePresence>
+              {data.projectsTaken.map(project => (
+                <motion.article
+                  key={project._id}
+                  className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-300"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                  transition={{ duration: 0.3 }}
+                  aria-labelledby={`project-title-${project._id}`}
+                >
+                  <h2 id={`project-title-${project._id}`} className="text-xl font-semibold text-indigo-600 mb-3">
+                    {project.title}
+                  </h2>
+                  <p className="text-gray-700 mb-3">{project.description}</p>
+                  <p className="text-sm">
+                    <strong className="text-indigo-600">Technologies :</strong>{' '}
+                    {project.technologies?.join(', ') || 'N/A'}
+                  </p>
+                  <p className="text-sm">
+                    <strong className="text-indigo-600">Statut :</strong> {project.status || 'Non défini'}
+                  </p>
+                </motion.article>
+              ))}
+            </AnimatePresence>
+          </div>
+        )}
+      </section>
+
+      {/* Quiz Progress Summary */}
+      <section className="mb-12">
+        <motion.h1
+          className="text-3xl font-bold text-indigo-700 mb-6 border-b-2 border-indigo-200 pb-2"
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          Résumé des progrès
+        </motion.h1>
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+          <h2 className="text-xl font-semibold text-indigo-600 mb-4">Tendances globales</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {quizGroups.map(group => (
+              <div key={group.title} className="p-4 bg-gray-100 rounded-lg">
+                <h3 className="text-lg font-medium text-indigo-600">{group.title}</h3>
+                <p className="text-sm text-gray-700">Score moyen : {group.averageScore.toFixed(1)}%</p>
+                <p
+                  className={`text-sm font-semibold ${
+                    group.trend === 'Progression'
+                      ? 'text-green-600'
+                      : group.trend === 'Régresse'
+                      ? 'text-red-600'
+                      : 'text-gray-600'
+                  }`}
+                >
+                  Tendance : {group.trend}
+                </p>
+                <button
+                  onClick={() => setSelectedGroup(group.title)}
+                  className="mt-2 text-sm text-indigo-600 hover:text-indigo-800 underline"
+                >
+                  Voir le graphique
+                </button>
+              </div>
+            ))}
+          </div>
+          {selectedGroup && (
+            <motion.div
+              className="mt-6"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <h3 className="text-lg font-semibold text-indigo-600 mb-4">
+                Graphique des scores : {selectedGroup}
+              </h3>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={quizGroups
+                      .find(group => group.title === selectedGroup)!
+                      .attempts.map((attempt, index) => ({
+                        name: `Essai ${index + 1}`,
+                        score: attempt.score,
+                      }))}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis domain={[0, 100]} />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="score" stroke="#4f46e5" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </motion.div>
+          )}
+        </div>
+      </section>
+
+      {/* Quizzes Section */}
+      <section className="mb-12">
+        <motion.h1
+          className="text-3xl font-bold text-indigo-700 mb-6 border-b-2 border-indigo-200 pb-2"
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          Quizzes ({quizGroups.length})
+        </motion.h1>
+        {quizGroups.length === 0 ? (
+          <motion.p
+            className="text-center text-gray-600 text-lg"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            Aucun quiz
+          </motion.p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <AnimatePresence>
+              {quizGroups.map((group, i) => (
+                <motion.article
+                  key={i}
+                  className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-300"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                  transition={{ duration: 0.3 }}
+                  aria-labelledby={`quiz-title-${i}`}
+                >
+                  <h2 id={`quiz-title-${i}`} className="text-xl font-semibold text-indigo-600 mb-3">
+                    {group.title}
+                  </h2>
+                  {group.attempts.map((attempt, j) => (
+                    <div key={j} className="mb-4">
+                      <p className="text-sm text-gray-700">
+                        <strong className="text-indigo-600">Date :</strong>{' '}
+                        {new Date(attempt.date).toLocaleDateString('fr-FR', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        })}
+                      </p>
+                      <div
+                        className="w-full bg-gray-200 rounded-full h-4 mb-2"
+                        role="progressbar"
+                        aria-valuenow={attempt.score}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                      >
+                        <motion.div
+                          className="bg-emerald-500 h-4 rounded-full"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${attempt.score}%` }}
+                          transition={{ duration: 0.5, ease: 'easeInOut' }}
+                        />
+                      </div>
+                      <p className="text-right text-sm font-semibold text-emerald-600">{attempt.score}%</p>
+                    </div>
+                  ))}
+                  <p
+                    className={`text-sm font-semibold ${
+                      group.trend === 'Progression'
+                        ? 'text-green-600'
+                        : group.trend === 'Régresse'
+                        ? 'text-red-600'
+                        : 'text-gray-600'
+                    }`}
+                  >
+                    Tendance : {group.trend}
+                  </p>
+                </motion.article>
+              ))}
+            </AnimatePresence>
+          </div>
+        )}
+      </section>
+    </main>
   );
 }

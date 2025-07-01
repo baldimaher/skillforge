@@ -1,12 +1,12 @@
 "use client";
 
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PlusCircle, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import { Trash2, PlusCircle } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from "next/link";
 
 interface Project {
     _id: string;
@@ -39,7 +39,14 @@ export default function ProjectsPage() {
             const res = await fetch("/api/projects");
             if (!res.ok) throw new Error("Erreur lors de la récupération des projets");
             const data = await res.json();
-            setProjects(data);
+
+            const cleaned = data.map((proj: any) => ({
+                ...proj,
+                objectives: Array.isArray(proj.objectives) ? proj.objectives : [],
+                technologies: Array.isArray(proj.technologies) ? proj.technologies : [],
+            }));
+
+            setProjects(cleaned);
         } catch (err: any) {
             setError(err.message || "Erreur inconnue");
         } finally {
@@ -149,12 +156,12 @@ export default function ProjectsPage() {
                             <CardContent className="space-y-3">
                                 <div className="flex items-center gap-4 text-sm text-slate-600">
                                     <span>⏱️ {project.duration}</span>
-                                    <span>📋 {project.objectives.length} objectifs</span>
+                                    <span>📋 {Array.isArray(project.objectives) ? project.objectives.length : 0} objectifs</span>
                                     <span>📌 Statut : {project.status}</span>
                                 </div>
 
                                 <div className="flex flex-wrap gap-2">
-                                    {project.technologies.map((tech, index) => (
+                                    {(Array.isArray(project.technologies) ? project.technologies : []).map((tech, index) => (
                                         <Badge key={index} variant="outline">{tech}</Badge>
                                     ))}
                                 </div>

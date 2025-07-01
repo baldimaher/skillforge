@@ -1,7 +1,8 @@
 export default async function extractSkillsFromText(text: string): Promise<string[]> {
-  const HF_TOKEN = process.env.HUGGINGFACE_TOKEN;
+  const HF_TOKEN ="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";
+  if (!HF_TOKEN) throw new Error("Token Hugging Face manquant");
 
-  const response = await fetch("https://api-inference.huggingface.co/models/Jean-Baptiste/roberta-large-ner-english", {
+  const response = await fetch("https://api-inference.huggingface.co/models/dslim/bert-base-NER", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${HF_TOKEN}`,
@@ -10,15 +11,22 @@ export default async function extractSkillsFromText(text: string): Promise<strin
     body: JSON.stringify({ inputs: text }),
   });
 
+  if (!response.ok) throw new Error("Erreur API Hugging Face");
+
+
   const data = await response.json();
 
-  const blacklist = ["français", "anglais", "rouge tunisien","Arabe"]; // mots à exclure (en minuscules)
+  if (!Array.isArray(data)) {
+    console.error("Réponse API inattendue :", data);
+    throw new Error("Réponse API HuggingFace au format inattendu");
+  }
+
+  const blacklist = ["français", "anglais", "rouge tunisien", "arabe"]; // mots à exclure en minuscules
 
   const skills = data
     .flat()
     .filter((item: any) => item.entity_group === "MISC" || item.entity_group === "SKILL")
     .map((item: any) => item.word)
-    // Supprimer doublons et filtrer la blacklist (insensible à la casse)
     .filter((value: string, index: number, self: string[]) =>
       self.indexOf(value) === index &&
       !blacklist.includes(value.toLowerCase())
