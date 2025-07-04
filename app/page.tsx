@@ -36,8 +36,13 @@ export default function LoginPage() {
         localStorage.setItem("quizzes", JSON.stringify(fullUser.quizzes || []));
         localStorage.setItem("certificates", JSON.stringify(fullUser.certificates || []));
 
-        // ✅ Redirection vers /dashboard pour tous
-        router.push("/dashboard");
+        // Redirection conditionnelle basée sur le rôle
+        const userRole = fullUser.role;
+        if (userRole === "admin") {
+          router.push("/admin/progress");
+        } else {
+          router.push("/dashboard");
+        }
       } else {
         setError(data.message || "Erreur lors de la connexion");
       }

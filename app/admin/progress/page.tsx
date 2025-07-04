@@ -1,209 +1,146 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { RefreshCw, Users, BookOpen, Code2, Star } from "lucide-react";
-
-interface User {
-  _id: string;
-  firstName: string;
-  lastName: string;
-  skills: string[];
-  quizzes: Array<{ score: number }>;
-  projectsTaken: Array<{ status: string }>;
-}
-
-interface Project {
-  _id: string;
-  status: string;
-}
+import {
+  Code2,
+  BookOpen,
+  Award,
+  Users,
+  CheckCircle,
+  TrendingUp,
+} from "lucide-react";
 
 export default function AdminProgressPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  const fetchAdminData = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError("");
-
-      // Charge tous les users
-      const usersRes = await fetch("/api/users");
-      if (!usersRes.ok) throw new Error("Erreur récupération utilisateurs");
-      const usersData: User[] = await usersRes.json();
-
-      // Charge tous les projets
-      const projectsRes = await fetch("/api/projects");
-      if (!projectsRes.ok) throw new Error("Erreur récupération projets");
-      const projectsData: Project[] = await projectsRes.json();
-
-      setUsers(usersData);
-      setProjects(projectsData);
-    } catch (err) {
-      console.error(err);
-      setError(err instanceof Error ? err.message : "Erreur inconnue");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [stats, setStats] = useState<any>(null);
+  const [userProgress, setUserProgress] = useState<any[]>([]);
 
   useEffect(() => {
-    fetchAdminData();
-  }, [fetchAdminData]);
+    fetch("/api/admin/stats")
+      .then((res) => res.json())
+      .then((data) => {
+        console.log("Stats API response:", data);
+        setStats(data);
+      })
+      .catch((e) => console.error("Erreur chargement stats", e));
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
-        <RefreshCw className="w-8 h-8 animate-spin text-blue-600" />
-      </div>
-    );
+    fetch("/api/progress")
+      .then((res) => res.json())
+      .then((data) => {
+        console.log("Progress API response:", data);
+        const currentUserId = localStorage.getItem("userId");
+        const filteredProgress = data.filter((u: any) => String(u.userId) !== currentUserId);
+        setUserProgress(filteredProgress);
+      })
+      .catch((e) => console.error("Erreur chargement progression", e));
+  }, []);
+
+  if (!stats || !userProgress) {
+    return <div className="text-center py-20 text-gray-600">Chargement...</div>;
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-red-50 p-6">
-        <p className="text-red-600 mb-4">{error}</p>
-        <Button onClick={fetchAdminData} variant="outline">
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Réessayer
-        </Button>
-      </div>
-    );
-  }
+  const cards = [
+    { label: "Projets", value: stats.projects, icon: <Code2 className="w-5 h-5 mr-2" />, bg: "bg-indigo-600" },
+    { label: "Quizzes", value: stats.quizzes.total, icon: <BookOpen className="w-5 h-5 mr-2" />, bg: "bg-emerald-500" },
+    { label: "Formations", value: stats.formations, icon: <Award className="w-5 h-5 mr-2" />, bg: "bg-pink-500" },
+    { label: "Certificats", value: stats.certificates, icon: <CheckCircle className="w-5 h-5 mr-2" />, bg: "bg-orange-500" },
+    { label: "Utilisateurs", value: stats.users, icon: <Users className="w-5 h-5 mr-2" />, bg: "bg-yellow-500" },
+  ];
 
-  // Calculs globaux
-
-  const totalProjects = projects.length;
-
-  const totalProjectsCompleted = projects.filter(
-    (p) => p.status.toLowerCase() === "terminé"
-  ).length;
-
-  // Total quizzes passés par tous les users (somme des quizzes de chaque user)
-  const totalQuizzesPassed = users.reduce(
-    (acc, user) => acc + (user.quizzes?.length ?? 0),
-    0
-  );
-
-  // Score moyen global sur tous les quizzes de tous les users
-  let totalScoreSum = 0;
-  let totalScoreCount = 0;
-  users.forEach((user) => {
-    user.quizzes.forEach((quiz) => {
-      totalScoreSum += quiz.score;
-      totalScoreCount++;
-    });
-  });
-  const averageScoreGlobal = totalScoreCount ? totalScoreSum / totalScoreCount : 0;
+  const quizSuccessRate = stats.quizzes.attempts > 0
+    ? Math.min((stats.quizzes.passed / stats.quizzes.attempts) * 100, 100)
+    : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 p-6">
-      <div className="max-w-7xl mx-auto space-y-8">
-        <header className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Tableau de Bord Admin - Progression Globale
-          </h1>
-          <Button onClick={fetchAdminData} variant="outline" size="sm">
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Actualiser
-          </Button>
-        </header>
+    <section className="p-6">
+      <h2 className="text-4xl font-extrabold text-center mb-12 text-gray-800">Statistiques Administrateur</h2>
 
-        {/* Statistiques globales */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card className="bg-blue-600 text-white shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Users className="w-6 h-6" />
-                <span>Utilisateurs</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{users.length}</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-green-600 text-white shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <BookOpen className="w-6 h-6" />
-                <span>Quizzes Passés</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{totalQuizzesPassed}</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-purple-600 text-white shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Code2 className="w-6 h-6" />
-                <span>Projets Terminés</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{totalProjectsCompleted}</p>
-              <p>Total projets: {totalProjects}</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-yellow-600 text-white shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Star className="w-6 h-6" />
-                <span>Score Moyen</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">
-                {averageScoreGlobal.toFixed(2)}%
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Liste utilisateurs et leurs compétences */}
-        <section>
-          <h2 className="text-2xl font-semibold mb-4">Compétences des Utilisateurs</h2>
-          <div className="space-y-4 max-h-[400px] overflow-y-auto">
-            {users.map((user) => (
-              <Card key={user._id}>
-                <CardContent>
-                  <h3 className="text-lg font-bold mb-1">
-                    {user.firstName} {user.lastName}
-                  </h3>
-                  {user.skills.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {user.skills.map((skill, i) => (
-                        <Badge
-                          key={i}
-                          variant="secondary"
-                          className="bg-blue-200 text-blue-800"
-                        >
-                          {skill}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="italic text-gray-500">Aucune compétence renseignée</p>
-                  )}
-                </CardContent>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-10">
+        <AnimatePresence>
+          {cards.map((card, idx) => (
+            <motion.div
+              key={card.label}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ delay: idx * 0.1 }}
+            >
+              <Card className={`${card.bg} text-white shadow-md rounded-xl`}>
+                <CardHeader>
+                  <CardTitle className="flex items-center text-lg">{card.icon} {card.label}</CardTitle>
+                </CardHeader>
+                <CardContent className="text-center text-3xl font-bold">{card.value}</CardContent>
               </Card>
-            ))}
-          </div>
-        </section>
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
-    </div>
+
+      <div className="mb-10">
+        <h3 className="text-xl font-semibold mb-2">Progression globale</h3>
+        <div className="w-full bg-gray-200 rounded-full h-6 overflow-hidden">
+          <div className="bg-indigo-600 h-full transition-all duration-500" style={{ width: `${stats.avgUserProgress}%` }} />
+        </div>
+        <div className="text-right text-sm mt-1 text-gray-600">{stats.avgUserProgress}%</div>
+      </div>
+
+      <div className="mb-10">
+        <h3 className="text-xl font-semibold mb-2">Taux de réussite aux quizzes</h3>
+        <div className="w-full bg-gray-200 rounded-full h-6 overflow-hidden">
+          <div className="bg-emerald-500 h-full transition-all duration-500" style={{ width: `${quizSuccessRate}%` }} />
+        </div>
+        <div className="text-right text-sm mt-1 text-gray-600">{stats.quizzes.passed} / {stats.quizzes.attempts} ({quizSuccessRate.toFixed(1)}%)</div>
+      </div>
+
+      <div className="mb-10">
+        <h3 className="text-xl font-semibold mb-2">Répartition des projets</h3>
+        <ul className="flex flex-wrap gap-6 text-gray-700">
+          <li>✅ <b>Terminés :</b> {stats.projectsCompleted}</li>
+          <li>🔄 <b>En cours :</b> {stats.projectsInProgress}</li>
+          <li>⏳ <b>À venir :</b> {stats.projectsPending}</li>
+        </ul>
+      </div>
+
+      <div className="mb-10">
+        <h3 className="text-xl font-semibold mb-4">Activité récente</h3>
+        <ul className="divide-y divide-gray-200 bg-white shadow rounded-lg overflow-hidden">
+          {stats.recentActivity.map((act: any, idx: number) => (
+            <li key={idx} className="px-4 py-3 flex justify-between text-sm text-gray-700">
+              <span className="font-semibold">{act.user}</span>
+              <span>{act.action}</span>
+              <span className="text-gray-500">{act.date}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="mb-10">
+        <h3 className="text-xl font-semibold mb-4">Progression par utilisateur</h3>
+        <div className="overflow-x-auto">
+          <table className="min-w-full bg-white shadow rounded-lg">
+            <thead>
+              <tr className="bg-gray-100 text-left text-sm text-gray-600">
+                <th className="py-2 px-4">Utilisateur</th>
+                <th className="py-2 px-4">Progression (%)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {userProgress.map((u: any, idx: number) => (
+                <tr key={idx} className="border-t">
+                  <td className="py-2 px-4">{u.name}</td>
+                  <td className="py-2 px-4">{u.progress}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
   );
 }
