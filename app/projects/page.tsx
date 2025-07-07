@@ -9,12 +9,11 @@ import {
 } from "@/components/ui/card";
 import { PlusCircle, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { toast } from "@/components/ui/use-toast";
 
-// Type pour les projets
 interface Project {
   _id: string;
   title: string;
@@ -35,8 +34,7 @@ export default function ProjectsPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const userStr =
-    typeof window !== "undefined" ? localStorage.getItem("user") : null;
+  const userStr = typeof window !== "undefined" ? localStorage.getItem("user") : null;
   const user = userStr ? JSON.parse(userStr) : null;
   const isAdmin = user?.role === "admin";
 
@@ -46,8 +44,7 @@ export default function ProjectsPage() {
     setError(null);
     try {
       const res = await fetch("/api/projects");
-      if (!res.ok)
-        throw new Error("Erreur lors de la récupération des projets");
+      if (!res.ok) throw new Error("Erreur lors de la récupération des projets");
       const data = await res.json();
       setProjects(data);
     } catch (err: any) {
@@ -67,15 +64,23 @@ export default function ProjectsPage() {
       const res = await fetch(`/api/projects/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Erreur lors de la suppression");
       setProjects((prev) => prev.filter((p) => p._id !== id));
-      setMessage("Projet supprimé avec succès.");
+      toast({ title: "Succès", description: "Projet supprimé avec succès." });
     } catch (err) {
-      setMessage("Erreur lors de la suppression du projet.");
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de la suppression du projet.",
+        variant: "destructive",
+      });
     }
   };
 
   const handleTakeProject = async (projectId: string) => {
     if (!user) {
-      setMessage("Veuillez vous connecter pour prendre un projet.");
+      toast({
+        title: "Erreur",
+        description: "Veuillez vous connecter pour prendre un projet.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -87,10 +92,14 @@ export default function ProjectsPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Erreur");
-      setMessage("Projet pris avec succès !");
+      toast({ title: "Succès", description: "Projet pris avec succès !" });
       fetchProjects();
     } catch (error: any) {
-      setMessage(error.message || "Erreur inconnue");
+      toast({
+        title: "Erreur",
+        description: error.message || "Erreur inconnue",
+        variant: "destructive",
+      });
     }
   };
 
@@ -98,12 +107,26 @@ export default function ProjectsPage() {
     try {
       const res = await fetch(`/api/projects/${projectId}/complete`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user._id }),
       });
       const data = await res.json();
-      alert(data.message);
-      fetchProjects();
+      if (res.ok) {
+        toast({ title: "Succès", description: "Projet marqué comme terminé !" });
+        fetchProjects();
+      } else {
+        toast({
+          title: "Erreur",
+          description: data.message || "Erreur lors de la finalisation du projet",
+          variant: "destructive",
+        });
+      }
     } catch (err) {
-      alert("Erreur lors de la finalisation du projet");
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de la finalisation du projet",
+        variant: "destructive",
+      });
     }
   };
 
@@ -125,9 +148,7 @@ export default function ProjectsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Projets disponibles</h1>
-          <p className="text-slate-600">
-            Liste des projets en cours, terminés ou à venir
-          </p>
+          <p className="text-slate-600">Liste des projets en cours, terminés ou à venir</p>
         </div>
         {isAdmin && (
           <Link href="/projects/new">
@@ -148,10 +169,7 @@ export default function ProjectsPage() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
-            <Card
-              key={project._id}
-              className="hover:shadow-md transition-shadow"
-            >
+            <Card key={project._id} className="hover:shadow-md transition-shadow">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div>
@@ -195,7 +213,6 @@ export default function ProjectsPage() {
                   <Button className="w-full">Voir les détails</Button>
                 </Link>
 
-                {/* === LOGIQUE BOUTONS SELON L'ÉTAT DU PROJET === */}
                 {!isAdmin && (
                   <>
                     {project.takenBy === user?._id ? (
@@ -217,17 +234,16 @@ export default function ProjectsPage() {
                     )}
                   </>
                 )}
+{(isAdmin || project.takenBy === user?._id) && (
+  <>
+  {project.status === "terminé" && (
+  <Badge className="w-full justify-center bg-green-100 text-green-800 text-sm py-2">
+    ✅ Projet terminé
+  </Badge>
+)}
+  </>
+)}
 
-                {(isAdmin || project.takenBy === user?._id) &&
-                  project.status !== "terminé" && (
-                    <Button
-                      variant="destructive"
-                      className="w-full"
-                      onClick={() => handleMarkAsComplete(project._id)}
-                    >
-                      ✅ Marquer comme terminé
-                    </Button>
-                  )}
               </CardContent>
             </Card>
           ))}

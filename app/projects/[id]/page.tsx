@@ -127,6 +127,15 @@ export default function ProjectDetailsPage() {
                 </div>
             </div>
 
+            {project.status === "terminé" && (
+                <div className="mt-6 bg-green-100 text-green-800 border border-green-300 rounded-lg p-4 text-center flex items-center justify-center gap-2">
+                    <CheckCircle className="w-6 h-6" />
+                    <span className="font-semibold">
+                        Félicitations ! Le projet <strong>"{project.title}"</strong> est terminé 🎉
+                    </span>
+                </div>
+            )}
+
             {Array.isArray(project.technologies) && project.technologies.length > 0 && (
                 <Card>
                     <CardHeader>
@@ -211,8 +220,8 @@ export default function ProjectDetailsPage() {
                                 <li key={index} className="flex items-start gap-2 text-sm">
                                     <span className="text-blue-600 mt-1">•</span>
                                     <span className="text-blue-600 hover:underline cursor-pointer">
-                    {resource}
-                  </span>
+                                        {resource}
+                                    </span>
                                 </li>
                             ))}
                         </ul>
@@ -293,9 +302,7 @@ export default function ProjectDetailsPage() {
                     </DropdownMenuContent>
                 </DropdownMenu>
 
-                <Link href={`/projects/${project._id}/kanban`}>
-                    <Button variant="outline" size="lg">Ouvrir le tableau</Button>
-                </Link>
+               
 
                 {project.githubUrl && (
                     <Button variant="outline" size="lg" onClick={() => window.open(project.githubUrl, "_blank")}>GitHub</Button>

@@ -1,24 +1,32 @@
-// app/api/projects/[id]/tasks/route.ts
 import { NextResponse } from "next/server";
 import Task from "@/models/task";
-import Project from "@/models/Project"; // Updated import with ProjectDocument
+import Project from "@/models/Project";
 import connectDB from "@/lib/mongo";
 
 interface Params {
   params: { id: string };
 }
 
+// GET: Récupérer les tâches d'un projet pour l'utilisateur connecté
 export async function GET(req: Request, { params }: Params) {
   await connectDB();
   try {
-    const project = await Project.findById(params.id).lean();
-    if (!project) {
-      return NextResponse.json({ message: "Projet non trouvé" }, { status: 404 });
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get("userId");
+    if (!userId) {
+      return NextResponse.json({ message: "userId est requis" }, { status: 400 });
     }
-    return NextResponse.json(project);
+
+    const tasks = await Task.find({ projectId: params.id, userId })
+      .populate("userId", "firstName lastName")
+      .lean();
+    return NextResponse.json(tasks);
   } catch (error) {
-    console.error("Erreur récupération projet :", error);
-    return NextResponse.json({ message: "Erreur serveur" }, { status: 500 });
+    console.error("Erreur lors de la récupération des tâches :", error);
+    return NextResponse.json(
+      { message: "Erreur serveur", error: error instanceof Error ? error.message : "Erreur inconnue" },
+      { status: 500 }
+    );
   }
 }
 
@@ -39,7 +47,7 @@ export async function POST(request: Request, { params }: Params) {
       return NextResponse.json({ message: "Projet non trouvé" }, { status: 404 });
     }
 
-    if (project.takenBy.toString() !== userId) {
+    if (!project.takenBy || project.takenBy.toString() !== userId) {
       return NextResponse.json(
         { message: "Vous n'êtes pas autorisé à ajouter des tâches à ce projet" },
         { status: 403 }
@@ -60,14 +68,19 @@ export async function POST(request: Request, { params }: Params) {
 
     await task.save();
 
-    const tasks = await Task.find({ projectId: params.id, userId });
-    const allTasksDone = tasks.length > 0 && tasks.every((t) => t.status === "done");
-    if (allTasksDone && project.status !== "terminé") {
+    // Vérification globale (toutes les tâches du projet)
+    const allTasks = await Task.find({ projectId: params.id });
+    const allDone = allTasks.length > 0 && allTasks.every(t => t.status === "done");
+
+    if (allDone && project.status !== "terminé") {
       project.status = "terminé";
+      await project.save();
+    } else if (!allDone && project.status === "terminé") {
+      project.status = "en cours";
       await project.save();
     }
 
-    return NextResponse.json({ message: "Tâche ajoutée", task: task.toObject() }, { status: 201 });
+    return NextResponse.json({ message: "Tâche ajoutée", task }, { status: 201 });
   } catch (error) {
     console.error("Erreur lors de l'ajout de la tâche :", error);
     return NextResponse.json(
@@ -78,6 +91,7 @@ export async function POST(request: Request, { params }: Params) {
 }
 
 // PUT: Mettre à jour une tâche
+
 export async function PUT(request: Request, { params }: Params) {
   await connectDB();
   try {
@@ -95,7 +109,7 @@ export async function PUT(request: Request, { params }: Params) {
     if (!project) {
       return NextResponse.json({ message: "Projet non trouvé" }, { status: 404 });
     }
-    if (project.takenBy.toString() !== task.userId.toString()) {
+    if (!project.takenBy || project.takenBy.toString() !== task.userId.toString()) {
       return NextResponse.json(
         { message: "Vous n'êtes pas autorisé à modifier cette tâche" },
         { status: 403 }
@@ -116,17 +130,24 @@ export async function PUT(request: Request, { params }: Params) {
       }
     }
     task.updatedAt = new Date();
-
     await task.save();
 
-    const tasks = await Task.find({ projectId: params.id, userId: task.userId });
-    const allTasksDone = tasks.every((t) => t.status === "done");
-    if (allTasksDone && project.status !== "terminé") {
+    // Vérifier si toutes les tâches du projet sont terminées
+    const allTasks = await Task.find({ projectId: params.id });
+    const allDone = allTasks.length > 0 && allTasks.every((t) => t.status === "done");
+
+    if (allDone && project.status !== "terminé") {
       project.status = "terminé";
+      await project.save();
+    } else if (!allDone && project.status === "terminé") {
+      project.status = "en cours";
       await project.save();
     }
 
-    return NextResponse.json({ message: "Tâche mise à jour", task: task.toObject() });
+    // Récupérer projet mis à jour pour renvoyer
+    const updatedProject = await Project.findById(params.id).lean();
+
+    return NextResponse.json({ message: "Tâche mise à jour", task, project: updatedProject });
   } catch (error) {
     console.error("Erreur lors de la mise à jour de la tâche :", error);
     return NextResponse.json(
@@ -154,7 +175,7 @@ export async function DELETE(request: Request, { params }: Params) {
     if (!project) {
       return NextResponse.json({ message: "Projet non trouvé" }, { status: 404 });
     }
-    if (project.takenBy.toString() !== task.userId.toString()) {
+    if (!project.takenBy || project.takenBy.toString() !== task.userId.toString()) {
       return NextResponse.json(
         { message: "Vous n'êtes pas autorisé à supprimer cette tâche" },
         { status: 403 }
@@ -163,13 +184,14 @@ export async function DELETE(request: Request, { params }: Params) {
 
     await Task.findByIdAndDelete(taskId);
 
-    const tasks = await Task.find({ projectId: params.id, userId: task.userId });
-    const allTasksDone = tasks.every((t) => t.status === "done");
-    if (allTasksDone && project.status !== "terminé") {
+    const allTasks = await Task.find({ projectId: params.id });
+    const allDone = allTasks.length > 0 && allTasks.every(t => t.status === "done");
+
+    if (allDone && project.status !== "terminé") {
       project.status = "terminé";
       await project.save();
-    } else if (!tasks.length && project.status === "terminé") {
-      project.status = "en cours"; // Revert to "en cours" if no tasks remain
+    } else if (!allDone && project.status === "terminé") {
+      project.status = "en cours";
       await project.save();
     }
 
