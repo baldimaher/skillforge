@@ -29,10 +29,14 @@ const projectSchema = new Schema(
       ref: "User",
       default: null,
     },
+    takenAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );
 
-const Project = mongoose.models.Project || mongoose.model("Project", projectSchema);
+const Project = models.Project || model("Project", projectSchema);
 
 export default Project;

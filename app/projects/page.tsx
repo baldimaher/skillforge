@@ -26,6 +26,7 @@ interface Project {
   createdAt: string;
   updatedAt: string;
   takenBy?: string;
+  takenAt?: string; // ✅ Ajouté pour vérifier les 7 jours
 }
 
 export default function ProjectsPage() {
@@ -34,7 +35,8 @@ export default function ProjectsPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const userStr = typeof window !== "undefined" ? localStorage.getItem("user") : null;
+  const userStr =
+    typeof window !== "undefined" ? localStorage.getItem("user") : null;
   const user = userStr ? JSON.parse(userStr) : null;
   const isAdmin = user?.role === "admin";
 
@@ -44,7 +46,8 @@ export default function ProjectsPage() {
     setError(null);
     try {
       const res = await fetch("/api/projects");
-      if (!res.ok) throw new Error("Erreur lors de la récupération des projets");
+      if (!res.ok)
+        throw new Error("Erreur lors de la récupération des projets");
       const data = await res.json();
       setProjects(data);
     } catch (err: any) {
@@ -112,12 +115,16 @@ export default function ProjectsPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        toast({ title: "Succès", description: "Projet marqué comme terminé !" });
+        toast({
+          title: "Succès",
+          description: "Projet marqué comme terminé !",
+        });
         fetchProjects();
       } else {
         toast({
           title: "Erreur",
-          description: data.message || "Erreur lors de la finalisation du projet",
+          description:
+            data.message || "Erreur lors de la finalisation du projet",
           variant: "destructive",
         });
       }
@@ -148,7 +155,9 @@ export default function ProjectsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Projets disponibles</h1>
-          <p className="text-slate-600">Liste des projets en cours, terminés ou à venir</p>
+          <p className="text-slate-600">
+            Liste des projets en cours, terminés ou à venir
+          </p>
         </div>
         {isAdmin && (
           <Link href="/projects/new">
@@ -169,7 +178,10 @@ export default function ProjectsPage() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
-            <Card key={project._id} className="hover:shadow-md transition-shadow">
+            <Card
+              key={project._id}
+              className="hover:shadow-md transition-shadow"
+            >
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div>
@@ -220,9 +232,25 @@ export default function ProjectsPage() {
                         ✅ Projet déjà pris par vous
                       </Button>
                     ) : project.takenBy ? (
-                      <Button variant="destructive" className="w-full" disabled>
-                        ❌ Projet pris par un autre – revient après 7 jours
-                      </Button>
+                      (() => {
+                        const takenAt = new Date(project.takenAt || "");
+                        const now = new Date();
+                        const diffInMs = now.getTime() - takenAt.getTime();
+                        const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
+                        const remaining = Math.ceil(7 - diffInDays);
+                        return (
+                          <Button
+                            variant="destructive"
+                            className="w-full"
+                            disabled
+                          >
+                            ❌ Projet pris par un autre –{" "}
+                            {remaining > 0
+                              ? `disponible dans ${remaining} j`
+                              : "bientôt dispo"}
+                          </Button>
+                        );
+                      })()
                     ) : (
                       <Button
                         variant="secondary"
@@ -234,16 +262,13 @@ export default function ProjectsPage() {
                     )}
                   </>
                 )}
-{(isAdmin || project.takenBy === user?._id) && (
-  <>
-  {project.status === "terminé" && (
-  <Badge className="w-full justify-center bg-green-100 text-green-800 text-sm py-2">
-    ✅ Projet terminé
-  </Badge>
-)}
-  </>
-)}
 
+                {(isAdmin || project.takenBy === user?._id) &&
+                  project.status === "terminé" && (
+                    <Badge className="w-full justify-center bg-green-100 text-green-800 text-sm py-2">
+                      ✅ Projet terminé
+                    </Badge>
+                  )} 
               </CardContent>
             </Card>
           ))}
