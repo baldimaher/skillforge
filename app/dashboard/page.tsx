@@ -194,12 +194,13 @@ export default function DashboardPage() {
                   Mes Projets
                 </div>
               </Link>
-              <Link href="/user/mes-certificats" className="group">
-                <div className="bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-center py-6 rounded-2xl shadow-xl font-bold text-lg transition-all duration-300 group-hover:scale-105 group-hover:shadow-2xl">
-                  <div className="text-3xl mb-2">🎓</div>
-                  Mes Certificats
-                </div>
-              </Link>
+              <Link href="/user/mesCertificats" className="group">
+              <div className="bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-center py-6 rounded-2xl shadow-xl font-bold text-lg transition-all duration-300 group-hover:scale-105 group-hover:shadow-2xl">
+                <div className="text-3xl mb-2">🎓</div>
+                Mes Certificats
+              </div>
+            </Link>
+
               <Link href="/user/MesQuiz" className="group">
                 <div className="bg-gradient-to-br from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white text-center py-6 rounded-2xl shadow-xl font-bold text-lg transition-all duration-300 group-hover:scale-105 group-hover:shadow-2xl">
                   <div className="text-3xl mb-2">🧠</div>

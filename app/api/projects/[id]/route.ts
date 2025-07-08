@@ -1,52 +1,32 @@
-// projects/[id]/route.ts
-
 import { NextResponse } from "next/server";
 import Project from "../../../../models/Project";
 import connectDB from "../../../../lib/mongo";
+import mongoose from "mongoose";
 
-interface Params {
-    params: { id: string };
-}
-
-export async function GET(_req: Request, { params }: Params) {
+export async function GET(req: Request) {
+  try {
     await connectDB();
-    try {
-        const project = await Project.findById(params.id).lean();
-        if (!project) {
-            return NextResponse.json({ message: "Projet non trouvé" }, { status: 404 });
-        }
-        return NextResponse.json(project);
-    } catch (error) {
-        return NextResponse.json({ message: "Erreur serveur" }, { status: 500 });
+
+    // Extraire l'id de l'URL
+    const url = new URL(req.url);
+    const paths = url.pathname.split("/");
+    const id = paths[paths.length - 1]; // dernier segment, soit l'id
+
+    console.log("ID reçu dans API :", id);
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ error: "ID invalide" }, { status: 400 });
     }
-}
 
-export async function PUT(request: Request, { params }: Params) {
-    await connectDB();
-    try {
-        const body = await request.json();
+    const project = await Project.findById(id);
 
-        // TODO: Vérifier l'autorisation (admin ou user autorisé)
-
-        const updatedProject = await Project.findByIdAndUpdate(params.id, body, { new: true });
-        if (!updatedProject) {
-            return NextResponse.json({ message: "Projet non trouvé" }, { status: 404 });
-        }
-        return NextResponse.json(updatedProject);
-    } catch (error) {
-        return NextResponse.json({ message: "Erreur serveur" }, { status: 500 });
+    if (!project) {
+      return NextResponse.json({ error: "Projet non trouvé" }, { status: 404 });
     }
-}
 
-export async function DELETE(_req: Request, { params }: Params) {
-    await connectDB();
-    try {
-        const deletedProject = await Project.findByIdAndDelete(params.id);
-        if (!deletedProject) {
-            return NextResponse.json({ message: "Projet non trouvé" }, { status: 404 });
-        }
-        return NextResponse.json({ message: "Projet supprimé" });
-    } catch (error) {
-        return NextResponse.json({ message: "Erreur serveur" }, { status: 500 });
-    }
+    return NextResponse.json(project);
+  } catch (error) {
+    console.error("Erreur dans API projects/[id] :", error);
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+  }
 }
