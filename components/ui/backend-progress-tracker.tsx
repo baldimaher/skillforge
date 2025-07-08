@@ -296,3 +296,4 @@ export default function BackendProgressTracker({ projectId, projectTitle }: Prop
     </Card>
   );
 }
+

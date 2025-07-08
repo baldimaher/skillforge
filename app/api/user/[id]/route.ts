@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/mongo";
 import User from "@/models/User";
-import "@/models/Certificate"; // ✅ NE PAS OUBLIER CETTE LIGNE
+import "@/models/Certificate";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     await dbConnect();
 
-    const user = await User.findById(params.id)
+    const { id } = context.params; // ✅ Déstructuration ici
+
+    const user = await User.findById(id)
       .populate("certificates")
       .populate({
         path: "quizzes.quiz",
