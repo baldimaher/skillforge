@@ -41,7 +41,7 @@ export default function UserProjectsPage() {
 
       try {
         // Appel à l'API pour récupérer tous les projets
-        const res = await fetch("/api/projects");
+        const res = await fetch("/project");
         if (!res.ok) throw new Error("Erreur lors de la récupération des projets");
         const allProjects: Project[] = await res.json();
 
