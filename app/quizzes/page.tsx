@@ -7,7 +7,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import Certificate, { openCertificateInNewTab } from "@/app/certificate/[quizId]/page";
 import { CheckCircle, Clock, Folder } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useCallback, useEffect, useState } from "react";
@@ -15,6 +14,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 
 interface QuizType {
   _id: string;
@@ -80,6 +81,16 @@ export default function QuizzesPage() {
       setUser(JSON.parse(userStr));
     }
     fetchQuizzes();
+    // Add message listener for PDF download request
+    const handleMessage = (event: MessageEvent) => {
+      console.log("Message received:", event.data, "from origin:", event.origin);
+      if (event.data === "downloadCertificate") {
+        console.log("Triggering downloadCertificate");
+        downloadCertificate();
+      }
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
   }, [fetchQuizzes]);
 
   // Get difficulty badge color
@@ -130,6 +141,7 @@ export default function QuizzesPage() {
         if (!canRetakeQuiz(quiz) && quiz.userAttempts) {
           const userAttempt = quiz.userAttempts.find((attempt) => attempt.userId === user?._id);
           if (userAttempt?.lastAttemptDate) {
+            console.log(`Quiz ${quiz.title}, lastAttemptDate:`, userAttempt.lastAttemptDate);
             newTimes[quiz._id] = getTimeUntilRetake(userAttempt.lastAttemptDate);
           }
         }
@@ -314,22 +326,238 @@ export default function QuizzesPage() {
     }
   }, [answers, currentQuestionIndex]);
 
-  // Handle certificate display
-  const handleShowCertificate = () => {
-    if (!user || !activeQuiz || score === null) {
-      setMessage("Erreur : Données nécessaires pour le certificat manquantes.");
+  // Generate and download certificate as PDF
+  const downloadCertificate = async () => {
+    console.log("Starting downloadCertificate", { activeQuiz, score });
+    const userStr = localStorage.getItem("user");
+    if (!userStr || !activeQuiz || score === null) {
+      console.error("Download aborted: Missing user, activeQuiz, or score", { userStr, activeQuiz, score });
       return;
     }
-    setShowCertificate(true);
+
+    const certificateElement = document.createElement('div');
+    certificateElement.innerHTML = generateCertificate().props.dangerouslySetInnerHTML.__html;
+    document.body.appendChild(certificateElement);
+
+    const canvas = await html2canvas(certificateElement, { scale: 2 });
+    const imgData = canvas.toDataURL('image/png');
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    const imgWidth = 210; // A4 width in mm
+    const pageHeight = 297; // A4 height in mm
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    let heightLeft = imgHeight;
+    let position = 0;
+
+    doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      doc.addPage();
+      doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+
+    console.log("Saving PDF:", `${activeQuiz.title}_certificate.pdf`);
+    doc.save(`${activeQuiz.title}_certificate.pdf`);
+    document.body.removeChild(certificateElement);
   };
 
-  // Handle certificate download in new tab
-  const handleOpenCertificateInNewTab = () => {
-    if (!user || !activeQuiz || score === null) {
-      setMessage("Erreur : Données nécessaires pour le certificat manquantes.");
-      return;
+  // Open certificate in new tab
+  const openCertificateInNewTab = () => {
+    const userStr = localStorage.getItem("user");
+    const user = userStr ? JSON.parse(userStr) : { firstName: "Utilisateur", lastName: "" };
+    const date = new Date().toLocaleDateString("fr-FR");
+
+    const certificateHtml = `
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Certificat de Réussite - ${activeQuiz?.title}</title>
+        <style>
+          body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .certificate {
+            background: white;
+            padding: 60px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+            border: 8px solid #4f46e5;
+            position: relative;
+            overflow: hidden;
+          }
+          .certificate::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(79, 70, 229, 0.1), transparent);
+            transform: rotate(45deg);
+            animation: shine 3s infinite;
+          }
+          @keyframes shine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+          }
+          .certificate-content {
+            position: relative;
+            z-index: 2;
+          }
+          h1 {
+            color: #4f46e5;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+          }
+          .recipient-name {
+            font-size: 2em;
+            color: #4f46e5;
+            font-weight: bold;
+            margin: 20px 0;
+            text-decoration: underline;
+          }
+          .quiz-title {
+            font-size: 1.5em;
+            color: #6366f1;
+            font-weight: 600;
+            margin: 20px 0;
+            font-style: italic;
+          }
+          .score {
+            font-size: 1.8em;
+            color: #059669;
+            font-weight: bold;
+            margin: 20px 0;
+          }
+          .date {
+            color: #6b7280;
+            font-size: 1.1em;
+            margin: 20px 0;
+          }
+          .decorative-border {
+            border: 3px solid #4f46e5;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+          }
+          .buttons {
+            margin-top: 40px;
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+          }
+          button {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+          }
+          button:hover {
+            background: #4338ca;
+            transform: translateY(-2px);
+          }
+          .print-button {
+            background: #059669;
+          }
+          .print-button:hover {
+            background: #047857;
+          }
+          @media print {
+            body {
+              background: white;
+              padding: 0;
+            }
+            .certificate {
+              box-shadow: none;
+              border: 2px solid #4f46e5;
+            }
+            .buttons {
+              display: none;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="certificate">
+          <div class="certificate-content">
+            <h1>🏆 Certificat de Réussite 🏆</h1>
+            <div class="decorative-border">
+              <p style="font-size: 1.2em; color: #6b7280; margin: 0;">Ceci certifie que</p>
+              <div class="recipient-name">${user.firstName} ${user.lastName}</div>
+              <p style="font-size: 1.2em; color: #6b7280; margin: 0;">a réussi avec succès le quiz</p>
+              <div class="quiz-title">"${activeQuiz?.title}"</div>
+              <div class="score">Score obtenu: ${score}%</div>
+              <div class="date">Délivré le ${date}</div>
+            </div>
+            <div class="buttons">
+              <button class="print-button" onclick="window.print()">
+                🖨️ Imprimer le certificat
+              </button>
+              <button onclick="window.postMessage('downloadCertificate', '*')">
+                📄 Télécharger en PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const newWindow = window.open();
+    if (newWindow) {
+      newWindow.document.write(certificateHtml);
+      newWindow.document.close();
     }
-    openCertificateInNewTab(user, activeQuiz.title, score);
+  };
+
+  // Render certificate
+  const generateCertificate = () => {
+    const userStr = localStorage.getItem("user");
+    const user = userStr ? JSON.parse(userStr) : { firstName: "Utilisateur", lastName: "" };
+    const date = new Date().toLocaleDateString("fr-FR");
+
+    return (
+      <div className="p-8 bg-white rounded-lg shadow-lg max-w-md mx-auto text-center mt-8 border border-indigo-200" dangerouslySetInnerHTML={{
+        __html: `
+          <h2 style="text-3xl font-bold mb-6 text-indigo-800">Certificat de Réussite</h2>
+          <p style="text-gray-600">Ceci certifie que</p>
+          <p style="text-2xl font-semibold my-4 text-indigo-700">${user.firstName} ${user.lastName}</p>
+          <p style="text-gray-600">a réussi le quiz</p>
+          <p style="text-xl font-medium text-indigo-600 my-4">${activeQuiz?.title}</p>
+          <p style="text-gray-600">avec un score de ${score}%</p>
+          <p style="my-4 text-gray-500">Date : ${date}</p>
+          <div style="flex gap-4 justify-center">
+            <button style="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg" onclick="window.print()">Imprimer le certificat</button>
+            <button style="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg" onclick="downloadCertificate()">Télécharger en PDF</button>
+          </div>
+        `
+      }} />
+    );
   };
 
   if (isLoading) {
@@ -460,33 +688,27 @@ export default function QuizzesPage() {
                 <CheckCircle className="w-8 h-8" />
                 <p>Félicitations, vous avez réussi le quiz !</p>
               </div>
-              {certificateReady && user && (
+              {certificateReady && (
                 <div className="flex gap-4">
                   <Button
-                    onClick={handleOpenCertificateInNewTab}
+                    onClick={openCertificateInNewTab}
                     className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg shadow"
                   >
                     Voir certificat
                   </Button>
                   <Button
-                    onClick={handleShowCertificate}
+                    onClick={downloadCertificate}
                     className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg shadow"
                   >
-                    Afficher certificat
+                    Télécharger certificat
                   </Button>
                 </div>
               )}
-              {showCertificate && user && (
-                <Certificate
-                  user={user}
-                  quizTitle={activeQuiz.title}
-                  score={score}
-                />
-              )}
+              {showCertificate && generateCertificate()}
             </>
           ) : (
             <p className="text-red-600 text-lg font-semibold">
-              Désolé, vous n'avez pas atteint le score requis ({activeQuiz.passingScore}%).
+              Désolé, vous n'avez pas atteint le score requis (${activeQuiz.passingScore}%).
             </p>
           )}
           {message && (
