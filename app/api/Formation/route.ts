@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { mkdir, writeFile } from "fs/promises";
-
+import path from "path";
 import Formation from "../../../models/Formation";
 import dbConnect from "../../../lib/mongo";
-import path from "path";
 
 export const config = {
   api: {
-    bodyParser: false,
+    bodyParser: false, // Nécessaire pour traiter formData avec fichiers
   },
 };
 
@@ -30,6 +29,10 @@ export async function POST(req: NextRequest) {
 
     const title = formData.get("title")?.toString();
     const description = formData.get("description")?.toString();
+    const duration = formData.get("duration")?.toString() || "";
+    const instructor = formData.get("instructor")?.toString() || "";
+    const level = formData.get("level")?.toString() || "";
+    const category = formData.get("category")?.toString() || "";
 
     if (!title || !description) {
       return NextResponse.json({ error: "Titre et description requis." }, { status: 400 });
@@ -42,7 +45,7 @@ export async function POST(req: NextRequest) {
     let videoUrl = "";
 
     const photoFile = formData.get("photo");
-    if (photoFile && photoFile instanceof File) {
+    if (photoFile && photoFile instanceof File && photoFile.size > 0) {
       const photoBuffer = Buffer.from(await photoFile.arrayBuffer());
       const photoName = `${Date.now()}_${photoFile.name.replace(/\s+/g, "_")}`;
       await writeFile(path.join(uploadsDir, photoName), photoBuffer);
@@ -50,7 +53,7 @@ export async function POST(req: NextRequest) {
     }
 
     const videoFile = formData.get("video");
-    if (videoFile && videoFile instanceof File) {
+    if (videoFile && videoFile instanceof File && videoFile.size > 0) {
       const videoBuffer = Buffer.from(await videoFile.arrayBuffer());
       const videoName = `${Date.now()}_${videoFile.name.replace(/\s+/g, "_")}`;
       await writeFile(path.join(uploadsDir, videoName), videoBuffer);
@@ -62,6 +65,10 @@ export async function POST(req: NextRequest) {
       description,
       photoUrl,
       videoUrl,
+      duration,
+      instructor,
+      level,
+      category,
       createdAt: new Date(),
       updatedAt: new Date(),
     });

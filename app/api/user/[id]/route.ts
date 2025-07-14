@@ -1,33 +1,29 @@
-import { NextRequest, NextResponse } from "next/server";
-import dbConnect from "@/lib/mongo";
-import User from "@/models/User";
-import "@/models/Certificate"; // ✅ NE PAS OUBLIER CETTE LIGNE
+import { NextResponse } from "next/server";
+import User from "../../../../models/User";
+import dbConnect from "../../../../lib/mongo";
 
 export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
+  _request: Request,
+  context: { params: { id: string } }
 ) {
-  try {
-    await dbConnect();
+  await dbConnect();
 
-    const user = await User.findById(params.id)
+  const { id } = context.params;
+
+  try {
+    const user = await User.findById(id)
       .populate("certificates")
       .populate({
         path: "quizzes.quiz",
-        select: "title category description",
-      })
-      .populate({
-        path: "projectsTaken",
-        select: "title difficulty status technologies",
+        model: "Quiz",
       });
 
     if (!user) {
-      return NextResponse.json({ error: "Utilisateur non trouvé." }, { status: 404 });
+      return NextResponse.json({ error: "Utilisateur non trouvé" }, { status: 404 });
     }
 
-    return NextResponse.json(user);
-  } catch (err) {
-    console.error("Erreur GET /api/user/[id]:", err);
-    return NextResponse.json({ error: "Erreur serveur." }, { status: 500 });
+    return NextResponse.json(user, { status: 200 });
+  } catch (error) {
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

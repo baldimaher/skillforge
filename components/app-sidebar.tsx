@@ -6,8 +6,9 @@ import {
   Code2,
   GraduationCap,
   Home,
+  MessageCircle,
   PlusCircle,
-  Trophy,
+  Trophy
 } from "lucide-react";
 import {
   Sidebar,
@@ -42,17 +43,17 @@ export function AppSidebar() {
     }
   }, []);
 
-  // ✅ Menu commun pour tous les rôles
+  // Menu commun pour tous les rôles, Feedback inclus une seule fois
   const menuItems = [
     { title: "Dashboard", url: "/dashboard", icon: Home },
-    // ✅ Lien conditionnel pour "Progress"
     { title: "Progress", url: role === "admin" ? "/admin/progress" : "/progress", icon: BarChart3 },
     { title: "Quizzes", url: "/quizzes", icon: BookOpen },
-    { title: "Projects", url: "/project", icon: Code2 },
+    { title: "Projects", url: "/projects", icon: Code2 },
     { title: "Formation", url: "/Formation", icon: GraduationCap },
+    { title: "Feedback", url: "/feedback", icon: MessageCircle },
   ];
 
-  // ✅ Ajouts spécifiques pour admin
+  // Ajouts spécifiques pour admin (sans Feedback car déjà présent)
   if (role === "admin") {
     menuItems.push(
       { title: "Add Quiz", url: "/admin/addquiz", icon: PlusCircle },

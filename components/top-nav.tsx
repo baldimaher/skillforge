@@ -31,24 +31,30 @@ export function TopNav() {
   >([]);
   const [notifCount, setNotifCount] = useState(0);
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) setUser(JSON.parse(storedUser));
+useEffect(() => {
+  const storedUser = localStorage.getItem("user");
+  if (storedUser) setUser(JSON.parse(storedUser));
 
-    fetch("/api/Formation")
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setFormations(data);
-          const viewed = JSON.parse(localStorage.getItem("formationsViewed") || "[]");
-          const nonViewedCount = data.filter((f) => !viewed.includes(f._id)).length;
-          setNotifCount(nonViewedCount);
-        }
-      })
-      .catch((err) => {
-        console.error("Erreur fetch formation:", err);
-      });
-  }, []);
+  fetch("/api/Formation")
+    .then((res) => {
+      if (!res.ok) throw new Error(`Erreur API: ${res.status}`);
+      return res.json();
+    })
+    .then((data) => {
+      if (Array.isArray(data)) {
+        setFormations(data);
+        const viewed = JSON.parse(localStorage.getItem("formationsViewed") || "[]");
+        const nonViewedCount = data.filter((f) => !viewed.includes(f._id)).length;
+        setNotifCount(nonViewedCount);
+      } else {
+        throw new Error("Format de données invalide");
+      }
+    })
+    .catch((err) => {
+      console.error("Erreur fetch formation:", err.message);
+    });
+}, []);
+
 
   const handleNotificationsOpenChange = (open: boolean) => {
     if (open) {

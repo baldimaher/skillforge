@@ -1,13 +1,13 @@
-import mongoose from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
-const QuizResultSchema = new mongoose.Schema({
-  quiz: { type: mongoose.Schema.Types.ObjectId, ref: "Quiz" },
+const QuizResultSchema = new Schema({
+  quiz: { type: Schema.Types.ObjectId, ref: "Quiz" },
   score: Number,
   date: Date,
   title: String,
 });
 
-const userSchema = new mongoose.Schema({
+const userSchema = new Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   phone: String,
@@ -20,8 +20,9 @@ const userSchema = new mongoose.Schema({
   skills: { type: [String], default: [] },
   quizzes: [QuizResultSchema],
   role: { type: String, enum: ["user", "admin"], default: "user" },
-  projectsTaken: [{ type: mongoose.Schema.Types.ObjectId, ref: "Project" }],
-  certificates: [{ type: mongoose.Schema.Types.ObjectId, ref: "Certificate" }],
+  projectsTaken: [{ type: Schema.Types.ObjectId, ref: "Project" }],
+  certificates: [{ type: Schema.Types.ObjectId, ref: "Certificate" }],
+
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });
