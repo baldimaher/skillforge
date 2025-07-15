@@ -1,33 +1,91 @@
 import { NextRequest, NextResponse } from "next/server";
-
-import Task from "../../../models/task";
-import connectDB from "../../../lib/mongo";
+import connectDB from "@/lib/mongo";
+import Project from "@/models/Project";
+import Task from "@/models/task";
 
 export async function GET(
-  req: NextRequest,
+  request: NextRequest,
+  context: { params: { id: string } }
+) {
+  const params = await context.params;
+
+  await connectDB();
+
+  const tasks = await Task.find({ projectId: params.id });
+
+  if (!tasks) {
+    return NextResponse.json({ message: "Aucune tâche trouvée" }, { status: 404 });
+  }
+
+  return NextResponse.json(tasks);
+}
+
+export async function POST(
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   await connectDB();
-  const task = await Task.findById(params.id);
-  if (!task) return NextResponse.json({ message: "Not found" }, { status: 404 });
-  return NextResponse.json(task);
+
+  const { userId, title, description, priority, hours } = await request.json();
+
+  if (!userId || !title || !params.id) {
+    return NextResponse.json(
+      { message: "userId, titre et projectId sont obligatoires" },
+      { status: 400 }
+    );
+  }
+
+  const project = await Project.findById(params.id);
+  if (!project) {
+    return NextResponse.json({ message: "Projet non trouvé" }, { status: 404 });
+  }
+
+  const newTask = new Task({
+    userId,
+    projectId: params.id,
+    title,
+    description,
+    priority,
+    hours,
+    status: "todo",
+  });
+
+  await newTask.save();
+
+  return NextResponse.json(newTask, { status: 201 });
 }
 
 export async function PUT(
-  req: NextRequest,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: { id: string } }
 ) {
+  const params = await context.params;
+  const data = await request.json();
+
   await connectDB();
-  const data = await req.json();
+
   const updated = await Task.findByIdAndUpdate(params.id, data, { new: true });
+
+  if (!updated) {
+    return NextResponse.json({ message: "Tâche non trouvée" }, { status: 404 });
+  }
+
   return NextResponse.json(updated);
 }
 
 export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: { id: string } }
 ) {
+  const params = await context.params;
+
   await connectDB();
-  await Task.findByIdAndDelete(params.id);
+
+  const deleted = await Task.findByIdAndDelete(params.id);
+
+  if (!deleted) {
+    return NextResponse.json({ message: "Tâche non trouvée" }, { status: 404 });
+  }
+
   return NextResponse.json({ message: "Tâche supprimée" });
 }

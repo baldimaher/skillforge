@@ -26,6 +26,20 @@ import { usePathname } from "next/navigation";
 
 type RoleType = "user" | "admin";
 
+const baseMenuItems = [
+  { title: "Dashboard", url: "/dashboard", icon: Home },
+  { title: "Quizzes", url: "/quizzes", icon: BookOpen },
+  { title: "Projects", url: "/projects", icon: Code2 },
+  { title: "Formation", url: "/Formation", icon: GraduationCap },
+  { title: "Progress", url: "/progress", icon: BarChart3 },
+];
+
+const adminMenuItems = [
+  { title: "Add Quiz", url: "/admin/addquiz", icon: PlusCircle },
+  { title: "Add Project", url: "/admin/addproject", icon: PlusCircle },
+  { title: "Add Formation", url: "/admin/addformation", icon: PlusCircle },
+];
+
 export function AppSidebar() {
   const pathname = usePathname();
   const [role, setRole] = useState<RoleType>("user");
@@ -33,19 +47,19 @@ export function AppSidebar() {
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        setRole(parsedUser.role || "user");
-      } catch (err) {
-        console.error("Erreur de parsing user:", err);
-      }
+      const parsedUser = JSON.parse(storedUser);
+      setRole(parsedUser.role || "user");
     }
   }, []);
 
   // Menu commun pour tous les rôles, Feedback inclus une seule fois
   const menuItems = [
     { title: "Dashboard", url: "/dashboard", icon: Home },
-    { title: "Progress", url: role === "admin" ? "/admin/progress" : "/progress", icon: BarChart3 },
+    {
+      title: "Progress",
+      url: role === "admin" ? "/admin/progress" : "/progress",
+      icon: BarChart3,
+    },
     { title: "Quizzes", url: "/quizzes", icon: BookOpen },
     { title: "Projects", url: "/projects", icon: Code2 },
     { title: "Formation", url: "/Formation", icon: GraduationCap },
@@ -71,7 +85,6 @@ export function AppSidebar() {
           <span className="text-xl font-bold text-slate-900">SkillForge</span>
         </div>
       </SidebarHeader>
-
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>

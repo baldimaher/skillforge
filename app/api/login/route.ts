@@ -1,24 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-
-import User from "../../../models/User";
+import dbConnect from "@/lib/mongo";
+import User from "@/models/User";
 import bcrypt from "bcryptjs";
-import dbConnect from "../../../lib/mongo";
-
-export async function GET() {
-  try {
-    await dbConnect();
-    return NextResponse.json({ message: "✅ Connexion MongoDB réussie !" });
-  } catch (error) {
-    return NextResponse.json({ message: "❌ Connexion MongoDB échouée." }, { status: 500 });
-  }
-}
 
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
 
-    const body = await req.json();
-    const { email, password } = body;
+    const { email, password } = await req.json();
 
     if (!email || !password) {
       return NextResponse.json({ error: "Champs manquants" }, { status: 400 });
@@ -30,11 +19,11 @@ export async function POST(req: NextRequest) {
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
+
     if (!isMatch) {
       return NextResponse.json({ error: "Mot de passe incorrect" }, { status: 401 });
     }
 
-    // ✅ Réponse avec _id, email et rôle
     return NextResponse.json({
       success: true,
       message: "✅ Connexion réussie",
@@ -46,12 +35,17 @@ export async function POST(req: NextRequest) {
         role: user.role,
         projectsTaken: user.projectsTaken,
         quizzes: user.quizzes,
-        certificates:user.certificates
+        certificates: user.certificates,
       },
     });
 
   } catch (error) {
-    console.error("Erreur POST login:", error);
+    console.error("❌ Erreur POST login:", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
+}
+
+
+export async function GET() {
+  return NextResponse.json({ error: "Méthode GET non autorisée" }, { status: 405 });
 }

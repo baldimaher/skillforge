@@ -91,11 +91,12 @@ export default function LoginPage() {
               <label className="flex items-center gap-2">
                 <input type="checkbox" className="accent-indigo-500" />
                 Se souvenir de moi
-              </label>
-              <a href="#" className="hover:underline text-indigo-600">
-                Mot de passe oublié ?
-              </a>
-            </div>
+                </label>
+                <a href="/forgot-password" className="hover:underline text-indigo-600">
+  Mot de passe oublié ?
+</a>
+
+         </div>
             <button
               type="submit"
               disabled={loading}

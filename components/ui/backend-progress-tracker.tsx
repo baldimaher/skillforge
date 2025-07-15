@@ -1,6 +1,6 @@
-// app/components/BackendProgressTracker.tsx
 "use client";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertCircle,
   BarChart3,
@@ -10,8 +10,13 @@ import {
   Plus,
   Target,
 } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  CreateStepData,
+  Step,
+  UpdateStepData,
+  stepsAPI,
+} from "../../lib/api/steps";
 import {
   Dialog,
   DialogContent,
@@ -36,168 +41,161 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useEffect, useState } from "react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "@/components/ui/use-toast";
-import TaskStatusUpdater from "../../app/projects/TaskStatusUpdater";
-
-interface Step {
-  _id: string;
-  title: string;
-  description?: string;
-  status: "todo" | "doing" | "done";
-  priority: "low" | "medium" | "high";
-  hours: number;
-  projectId: string;
-  userId: string;
-  startDate?: string;
-  endDate?: string;
-}
 
 interface Props {
   projectId: string;
   projectTitle: string;
 }
 
-export default function BackendProgressTracker({ projectId, projectTitle }: Props) {
+const DEFAULT_STEPS: CreateStepData[] = [
+  { title: "Configuration environnement", priority: "high", hours: 2 },
+  { title: "Analyse des exigences", priority: "high", hours: 3 },
+  { title: "Conception architecture", priority: "medium", hours: 4 },
+  { title: "Développement principal", priority: "high", hours: 8 },
+  { title: "Tests et débogage", priority: "medium", hours: 3 },
+  { title: "Documentation", priority: "low", hours: 2 },
+];
+
+export default function BackendProgressTracker({
+  projectId,
+  projectTitle,
+}: Props) {
   const [steps, setSteps] = useState<Step[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [isAdding, setIsAdding] = useState(false);
-  const [newStep, setNewStep] = useState({
+  const [newStep, setNewStep] = useState<CreateStepData>({
     title: "",
-    description: "",
     hours: 1,
-    priority: "medium" as "low" | "medium" | "high",
+    priority: "medium",
   });
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   const handlePrint = () => window.print();
 
   useEffect(() => {
-    loadData();
+    loadSteps();
   }, [projectId]);
 
-  const loadData = async () => {
+  const loadSteps = async () => {
     try {
       setLoading(true);
       setError(null);
-
-      if (!user._id) {
-        throw new Error("Utilisateur non connecté. Veuillez vous connecter.");
+      const data = await stepsAPI.getSteps(projectId);
+      if (data.length === 0) {
+        await createDefaultSteps();
+      } else {
+        setSteps(data);
       }
-
-      const tasksRes = await fetch(`/api/projects/${projectId}/tasks?userId=${user._id}`);
-      if (!tasksRes.ok) {
-        const errorData = await tasksRes.json();
-        throw new Error(errorData.message || "Erreur lors du chargement des tâches");
-      }
-      const tasksData = await tasksRes.json();
-      setSteps(Array.isArray(tasksData) ? tasksData : []);
     } catch (err: any) {
-      setError(err.message || "Erreur lors du chargement des données");
-      console.error("Erreur loadData:", err);
-      toast({ title: "Erreur", description: err.message || "Erreur serveur", variant: "destructive" });
+      setError(err.message || "Erreur lors du chargement des étapes");
     } finally {
       setLoading(false);
     }
   };
 
-  const addStep = async () => {
-    if (!newStep.title.trim()) {
-      toast({ title: "Erreur", description: "Le titre est requis", variant: "destructive" });
-      return;
-    }
-    if (!user._id) {
-      toast({ title: "Erreur", description: "Utilisateur non connecté", variant: "destructive" });
-      return;
-    }
-
-    setIsAdding(true);
+  const createDefaultSteps = async () => {
     try {
-      const res = await fetch(`/api/projects/${projectId}/tasks`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: user._id,
-          title: newStep.title,
-          description: newStep.description,
-          priority: newStep.priority,
-          hours: newStep.hours,
-        }),
-      });
-      const data = await res.json();
-
-      if (res.ok) {
-        await loadData();
-        setNewStep({ title: "", description: "", hours: 1, priority: "medium" });
-        setShowAddDialog(false);
-        toast({ title: "Succès", description: "Étape ajoutée avec succès" });
-      } else {
-        toast({ title: "Erreur", description: data.message || "Erreur lors de l'ajout", variant: "destructive" });
+      const createdSteps: Step[] = [];
+      for (const stepData of DEFAULT_STEPS) {
+        const step = await stepsAPI.createStep(projectId, stepData);
+        createdSteps.push(step);
       }
+      setSteps(createdSteps);
+    } catch (err: any) {
+      setError("Erreur lors de la création des étapes par défaut");
+    }
+  };
+
+  const updateStep = async (stepId: string, updates: UpdateStepData) => {
+    try {
+      const updatedStep = await stepsAPI.updateStep(projectId, stepId, updates);
+      setSteps((prev) =>
+        prev.map((step) => (step._id === stepId ? updatedStep : step))
+      );
+    } catch (err: any) {
+      setError(err.message || "Erreur lors de la mise à jour");
+    }
+  };
+
+  const addStep = async () => {
+    if (!newStep.title.trim()) return;
+    try {
+      const step = await stepsAPI.createStep(projectId, newStep);
+      setSteps((prev) => [...prev, step]);
+      setNewStep({ title: "", hours: 1, priority: "medium" });
+      setShowAddDialog(false);
     } catch (err: any) {
       setError(err.message || "Erreur lors de l'ajout");
-      toast({ title: "Erreur", description: err.message || "Erreur serveur", variant: "destructive" });
-    } finally {
-      setIsAdding(false);
     }
   };
 
   const deleteStep = async (stepId: string) => {
     try {
-      const res = await fetch(`/api/projects/${projectId}/tasks`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ taskId: stepId }),
-      });
-      if (res.ok) {
-        await loadData();
-        toast({ title: "Succès", description: "Étape supprimée" });
-      } else {
-        const data = await res.json();
-        toast({ title: "Erreur", description: data.message || "Erreur lors de la suppression", variant: "destructive" });
-      }
+      await stepsAPI.deleteStep(projectId, stepId);
+      setSteps((prev) => prev.filter((step) => step._id !== stepId));
     } catch (err: any) {
       setError(err.message || "Erreur lors de la suppression");
-      toast({ title: "Erreur", description: err.message || "Erreur serveur", variant: "destructive" });
     }
   };
 
-  const handleProjectCompleted = () => {
-    toast({
-      title: "Félicitations !",
-      description: `Le projet "${projectTitle}" est terminé !`,
-    });
-  };
-
   const stats = {
-    total: steps.length || 0,
+    total: steps.length,
     done: steps.filter((s) => s.status === "done").length,
     doing: steps.filter((s) => s.status === "doing").length,
     totalHours: steps.reduce((sum, s) => sum + s.hours, 0),
-    doneHours: steps.filter((s) => s.status === "done").reduce((sum, s) => sum + s.hours, 0),
+    doneHours: steps
+      .filter((s) => s.status === "done")
+      .reduce((sum, s) => sum + s.hours, 0),
   };
 
   const progress = stats.total > 0 ? (stats.done / stats.total) * 100 : 0;
-  const allTasksDone = stats.total > 0 && stats.done === stats.total;
+
+  const getStatusIcon = (status: Step["status"]) => {
+    switch (status) {
+      case "done":
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case "doing":
+        return <Clock className="h-4 w-4 text-blue-600" />;
+      default:
+        return <Clock className="h-4 w-4 text-gray-400" />;
+    }
+  };
 
   const getPriorityColor = (priority: Step["priority"]) => {
     switch (priority) {
-      case "high": return "bg-red-100 text-red-800";
-      case "medium": return "bg-yellow-100 text-yellow-800";
-      case "low": return "bg-green-100 text-green-800";
+      case "high":
+        return "bg-red-100 text-red-800";
+      case "medium":
+        return "bg-yellow-100 text-yellow-800";
+      case "low":
+        return "bg-green-100 text-green-800";
+    }
+  };
+
+  const getStatusText = (status: Step["status"]) => {
+    switch (status) {
+      case "todo":
+        return "À faire";
+      case "doing":
+        return "En cours";
+      case "done":
+        return "Terminé";
     }
   };
 
   const getPriorityText = (priority: Step["priority"]) => {
     switch (priority) {
-      case "high": return "Haute";
-      case "medium": return "Moyenne";
-      case "low": return "Basse";
+      case "high":
+        return "Haute";
+      case "medium":
+        return "Moyenne";
+      case "low":
+        return "Basse";
     }
   };
 
@@ -220,16 +218,23 @@ export default function BackendProgressTracker({ projectId, projectTitle }: Prop
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5" /> Suivi des étapes - {projectTitle}
+              <Target className="h-5 w-5" />
+              Suivi des étapes - {projectTitle}
             </CardTitle>
-            <p className="text-sm text-gray-600 mt-1">Connecté au backend - Données synchronisées</p>
+            <p className="text-sm text-gray-600 mt-1">
+              Connecté au backend - Données synchronisées
+            </p>
           </div>
+
           <div className="flex gap-2 no-print">
-            <Button variant="outline" onClick={handlePrint}>🖨️ Imprimer</Button>
+            <Button variant="outline" onClick={handlePrint}>
+              🖨️ Imprimer
+            </Button>
             <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
               <DialogTrigger asChild>
-                <Button disabled={!!error}>
-                  <Plus className="h-4 w-4 mr-2" /> Ajouter
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Ajouter
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -237,22 +242,70 @@ export default function BackendProgressTracker({ projectId, projectTitle }: Prop
                   <DialogTitle>Nouvelle étape</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
-                  <div><Label>Titre</Label><Input value={newStep.title} onChange={(e) => setNewStep({ ...newStep, title: e.target.value })} placeholder="Nom de l'étape" /></div>
-                  <div><Label>Description (optionnel)</Label><Input value={newStep.description} onChange={(e) => setNewStep({ ...newStep, description: e.target.value })} placeholder="Description de l'étape" /></div>
+                  <div>
+                    <Label>Titre</Label>
+                    <Input
+                      value={newStep.title}
+                      onChange={(e) =>
+                        setNewStep({ ...newStep, title: e.target.value })
+                      }
+                      placeholder="Nom de l'étape"
+                    />
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div><Label>Priorité</Label><Select value={newStep.priority} onValueChange={(value) => setNewStep({ ...newStep, priority: value as Step["priority"] })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="low">Basse</SelectItem><SelectItem value="medium">Moyenne</SelectItem><SelectItem value="high">Haute</SelectItem></SelectContent></Select></div>
-                    <div><Label>Heures</Label><Input type="number" min="0.5" step="0.5" value={newStep.hours} onChange={(e) => setNewStep({ ...newStep, hours: parseFloat(e.target.value) || 1 })} /></div>
+                    <div>
+                      <Label>Priorité</Label>
+                      <Select
+                        value={newStep.priority}
+                        onValueChange={(value) =>
+                          setNewStep({
+                            ...newStep,
+                            priority: value as Step["priority"],
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">Basse</SelectItem>
+                          <SelectItem value="medium">Moyenne</SelectItem>
+                          <SelectItem value="high">Haute</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Heures</Label>
+                      <Input
+                        type="number"
+                        min="0.5"
+                        step="0.5"
+                        value={newStep.hours}
+                        onChange={(e) =>
+                          setNewStep({
+                            ...newStep,
+                            hours: parseFloat(e.target.value) || 1,
+                          })
+                        }
+                      />
+                    </div>
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowAddDialog(false)}>Annuler</Button>
-                  <Button onClick={addStep} disabled={isAdding}>{isAdding ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Ajouter</Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowAddDialog(false)}
+                  >
+                    Annuler
+                  </Button>
+                  <Button onClick={addStep}>Ajouter</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
           </div>
         </div>
       </CardHeader>
+
       <CardContent>
         {error && (
           <Alert className="mb-4" variant="destructive">
@@ -260,40 +313,148 @@ export default function BackendProgressTracker({ projectId, projectTitle }: Prop
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        {allTasksDone && (
-          <div className="mt-6 bg-green-100 text-green-800 border border-green-300 rounded-lg p-4 text-center flex items-center justify-center gap-2">
-            <CheckCircle className="w-6 h-6" />
-            <span className="font-semibold">Projet terminé 🎉</span>
-          </div>
-        )}
+
+        {/* Statistiques */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card><CardContent className="p-4"><div className="flex items-center gap-2"><BarChart3 className="h-4 w-4 text-blue-600" /><div><p className="text-sm font-medium">Progression</p><p className="text-2xl font-bold">{progress.toFixed(0)}%</p></div></div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-600" /><div><p className="text-sm font-medium">Terminées</p><p className="text-2xl font-bold">{stats.done}/{stats.total}</p></div></div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="flex items-center gap-2"><Clock className="h-4 w-4 text-blue-600" /><div><p className="text-sm font-medium">En cours</p><p className="text-2xl font-bold">{stats.doing}</p></div></div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="flex items-center gap-2"><Target className="h-4 w-4 text-purple-600" /><div><p className="text-sm font-medium">Heures</p><p className="text-2xl font-bold">{stats.doneHours}/{stats.totalHours}h</p></div></div></CardContent></Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-blue-600" />
+                <div>
+                  <p className="text-sm font-medium">Progression</p>
+                  <p className="text-2xl font-bold">{progress.toFixed(0)}%</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <div>
+                  <p className="text-sm font-medium">Terminées</p>
+                  <p className="text-2xl font-bold">
+                    {stats.done}/{stats.total}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-blue-600" />
+                <div>
+                  <p className="text-sm font-medium">En cours</p>
+                  <p className="text-2xl font-bold">{stats.doing}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Target className="h-4 w-4 text-purple-600" />
+                <div>
+                  <p className="text-sm font-medium">Heures</p>
+                  <p className="text-2xl font-bold">
+                    {stats.doneHours}/{stats.totalHours}h
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
+
+        {/* Barre de progression */}
         <div className="mb-6">
-          <div className="flex items-center justify-between mb-2"><span className="text-sm font-medium">Progression globale</span><span className="text-sm text-gray-600">{stats.done}/{stats.total} étapes</span></div>
-          <div className="w-full bg-gray-200 rounded-full h-2"><div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${progress}%` }} /></div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium">Progression globale</span>
+            <span className="text-sm text-gray-600">
+              {stats.done}/{stats.total} étapes
+            </span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div
+              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
         </div>
+
+        {/* Tableau des étapes */}
         <Table>
-          <TableHeader><TableRow><TableHead>Étape</TableHead><TableHead>Statut</TableHead><TableHead>Priorité</TableHead><TableHead>Heures</TableHead><TableHead>Dates</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Étape</TableHead>
+              <TableHead>Statut</TableHead>
+              <TableHead>Priorité</TableHead>
+              <TableHead>Heures</TableHead>
+              <TableHead>Dates</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
           <TableBody>
             {steps.map((step) => (
               <TableRow key={step._id}>
-                <TableCell><div className="flex items-center gap-3"><div><span className="font-medium">{step.title}</span>{step.description && <p className="text-sm text-gray-600">{step.description}</p>}</div></div></TableCell>
-                <TableCell><TaskStatusUpdater taskId={step._id} projectId={projectId} currentStatus={step.status} onProjectCompleted={handleProjectCompleted} /></TableCell>
-                <TableCell><Badge className={getPriorityColor(step.priority)}>{getPriorityText(step.priority)}</Badge></TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    {getStatusIcon(step.status)}
+                    <span className="font-medium">{step.title}</span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Select
+                    value={step.status}
+                    onValueChange={(value) =>
+                      updateStep(step._id!, { status: value as Step["status"] })
+                    }
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todo">À faire</SelectItem>
+                      <SelectItem value="doing">En cours</SelectItem>
+                      <SelectItem value="done">Terminé</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+                <TableCell>
+                  <Badge className={getPriorityColor(step.priority)}>
+                    {getPriorityText(step.priority)}
+                  </Badge>
+                </TableCell>
                 <TableCell>{step.hours}h</TableCell>
-                <TableCell><div className="text-sm text-gray-600">{step.startDate && <div>Début: {new Date(step.startDate).toLocaleDateString()}</div>}{step.endDate && <div>Fin: {new Date(step.endDate).toLocaleDateString()}</div>}</div></TableCell>
-                <TableCell>{step.userId === user._id && <Button variant="outline" size="sm" onClick={() => deleteStep(step._id)} className="text-red-600 hover:text-red-700">Supprimer</Button>}</TableCell>
+                <TableCell>
+                  <div className="text-sm text-gray-600">
+                    {step.startDate && (
+                      <div>
+                        Début: {new Date(step.startDate).toLocaleDateString()}
+                      </div>
+                    )}
+                    {step.endDate && (
+                      <div>
+                        Fin: {new Date(step.endDate).toLocaleDateString()}
+                      </div>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => deleteStep(step._id!)}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    Supprimer
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
-        {steps.length === 0 && <p className="text-center text-gray-600 mt-4">Aucune étape créée pour ce projet. Ajoutez-en une pour commencer !</p>}
       </CardContent>
     </Card>
   );
 }
-

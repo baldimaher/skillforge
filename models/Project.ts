@@ -1,22 +1,42 @@
 import mongoose, { Schema, model, models } from "mongoose";
 
-interface IProject {
-  title: string;
-  description?: string;
-  technologies?: string[];
-  level?: string;
-  createdAt?: Date;
-}
+const projectSchema = new Schema(
+  {
+    title: { type: String, required: true, trim: true },
+    description: { type: String, required: true },
+    technologies: { type: [String], default: [] },
+    status: {
+      type: String,
+      enum: ["en cours", "terminé", "à venir"],
+      default: "à venir",
+    },
+    difficulty: {
+      type: String,
+      enum: ["Beginner", "Intermediate", "Advanced"],
+      default: "Beginner",
+    },
+    objectives: { type: [String], default: [] },
+    duration: {
+      type: String,
+      default: "",
+    },
+    githubUrl: {
+      type: String,
+      default: "",
+    },
+    takenBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    takenAt: {
+      type: Date,
+      default: null,
+    },
+  },
+  { timestamps: true }
+);
 
-const projectSchema = new Schema<IProject>({
-  title: { type: String, required: true },
-  description: String,
-  technologies: [String],
-  level: String,
-  createdAt: { type: Date, default: Date.now },
-});
-
-// IMPORTANT : vérifier si le modèle existe déjà avant de le créer
-const Project = models.Project || model<IProject>("Project", projectSchema);
+const Project = models.Project || model("Project", projectSchema);
 
 export default Project;
