@@ -6,7 +6,7 @@ import { ThemeProvider } from "styled-components";
 const theme = {
   background: "#f5f8fb",
   fontFamily: "Arial",
-  headerBgColor: "#1e40af", // bleu foncé
+  headerBgColor: "#1e40af", 
   headerFontColor: "#fff",
   headerFontSize: "16px",
   botBubbleColor: "#1e40af",

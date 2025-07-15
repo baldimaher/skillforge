@@ -3,17 +3,28 @@
 import { NextRequest } from "next/server";
 import User from "@/models/User";
 import dbConnect from "@/lib/mongo";
+import User from "@/models/User";
+import "@/models/Certificate";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   await dbConnect();
 
-  const { id } = params;
+    const { id } = context.params; // ✅ Déstructuration ici
 
-  try {
-    const user = await User.findById(id);
+    const user = await User.findById(id)
+      .populate("certificates")
+      .populate({
+        path: "quizzes.quiz",
+        select: "title category description",
+      })
+      .populate({
+        path: "projectsTaken",
+        select: "title difficulty status technologies",
+      });
+
     if (!user) {
       return new Response("Utilisateur non trouvé", { status: 404 });
     }

@@ -44,15 +44,18 @@ export function AppSidebar() {
   }, []);
 
   // Menu commun pour tous les rôles, Feedback inclus une seule fois
+  // Menu commun pour tous les rôles, Feedback inclus une seule fois
   const menuItems = [
     { title: "Dashboard", url: "/dashboard", icon: Home },
     { title: "Progress", url: role === "admin" ? "/admin/progress" : "/progress", icon: BarChart3 },
     { title: "Quizzes", url: "/quizzes", icon: BookOpen },
     { title: "Projects", url: "/projects", icon: Code2 },
+    { title: "Projects", url: "/projects", icon: Code2 },
     { title: "Formation", url: "/Formation", icon: GraduationCap },
     { title: "Feedback", url: "/feedback", icon: MessageCircle },
   ];
 
+  // Ajouts spécifiques pour admin (sans Feedback car déjà présent)
   // Ajouts spécifiques pour admin (sans Feedback car déjà présent)
   if (role === "admin") {
     menuItems.push(
