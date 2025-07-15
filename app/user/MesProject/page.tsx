@@ -16,6 +16,7 @@ interface Project {
   technologies: string[];
   objectives: string[];
   status: "en cours" | "terminé" | "à venir";
+  takenBy?: string;
 }
 
 export default function UserProjectsPage() {
@@ -30,23 +31,16 @@ export default function UserProjectsPage() {
         setLoading(false);
         return;
       }
-      const user = JSON.parse(userStr);
-      const projectsTaken = user.projectsTaken;
 
-      if (!projectsTaken || projectsTaken.length === 0) {
-        setProjects([]);
-        setLoading(false);
-        return;
-      }
+      const user = JSON.parse(userStr);
 
       try {
-        // Appel à l'API pour récupérer tous les projets
-        const res = await fetch("/project");
+        const res = await fetch("/api/projects");
         if (!res.ok) throw new Error("Erreur lors de la récupération des projets");
         const allProjects: Project[] = await res.json();
 
-        // Filtrer les projets pour ne garder que ceux pris par l'utilisateur
-        const filteredProjects = allProjects.filter(p => projectsTaken.includes(p._id));
+        // 🔍 Filtrer uniquement les projets pris par l'utilisateur connecté
+        const filteredProjects = allProjects.filter(p => p.takenBy === user._id);
 
         setProjects(filteredProjects);
       } catch (err: any) {
@@ -93,11 +87,11 @@ export default function UserProjectsPage() {
               <CardContent className="space-y-3">
                 <div className="flex items-center gap-4 text-sm text-slate-600">
                   <span>⏱️ {project.duration}</span>
-                  <span>📋 {Array.isArray(project.objectives) ? project.objectives.length : 0} objectifs</span>
+                  <span>📋 {project.objectives?.length ?? 0} objectifs</span>
                   <span>📌 {project.status}</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {(Array.isArray(project.technologies) ? project.technologies : []).map((tech, idx) => (
+                  {project.technologies?.map((tech, idx) => (
                     <Badge key={idx} variant="outline">{tech}</Badge>
                   ))}
                 </div>

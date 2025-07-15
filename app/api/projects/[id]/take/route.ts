@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+
 import Project from "@/models/Project";
 import User from "@/models/User";
 import connectDB from "@/lib/mongo";
@@ -7,10 +8,10 @@ interface Params {
   params: { id: string };
 }
 
-export async function POST(request: Request, { params }: Params) {
+export async function POST(request: NextRequest, context: { params: { id: string } }) {
   await connectDB();
   try {
-    const { id: projectId } = params;
+    const { id: projectId } = context.params; // ✅ Utiliser `context.params`
     const body = await request.json();
     const userId = body.userId;
 

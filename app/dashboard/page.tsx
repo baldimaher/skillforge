@@ -188,7 +188,7 @@ export default function DashboardPage() {
               <span className="text-2xl">📂</span> Mes données
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Link href="/user/Mesproject" className="group">
+              <Link href="/user/MesProject" className="group">
                 <div className="bg-gradient-to-br from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white text-center py-6 rounded-2xl shadow-xl font-bold text-lg transition-all duration-300 group-hover:scale-105 group-hover:shadow-2xl">
                   <div className="text-3xl mb-2">🚀</div>
                   Mes Projets

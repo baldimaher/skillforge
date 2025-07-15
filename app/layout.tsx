@@ -3,6 +3,7 @@
 import './globals.css';
 
 import { AppSidebar } from '@/components/app-sidebar';
+import ChatBotComponent from '@/components/ChatBotComponent'; // 👈 Import du chatbot
 import { Inter } from 'next/font/google';
 import { ReactNode } from 'react';
 import { SidebarProvider } from '@/components/ui/sidebar';
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 <main className="flex-1 p-6 bg-slate-50/50">{children}</main>
               </div>
             </div>
+            <ChatBotComponent /> {/* 👈 Ajout du chatbot ici */}
           </SidebarProvider>
         )}
       </body>
