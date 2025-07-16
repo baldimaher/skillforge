@@ -1,3 +1,4 @@
+// app/components/BackendProgressTracker.tsx
 "use client";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -11,12 +12,6 @@ import {
   Target,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  CreateStepData,
-  Step,
-  UpdateStepData,
-  stepsAPI,
-} from "../../lib/api/steps";
 import {
   Dialog,
   DialogContent,
@@ -46,20 +41,26 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import TaskStatusUpdater from "../../app/projects/TaskStatusUpdater";
+import { toast } from "@/components/ui/use-toast";
+
+interface Step {
+  _id: string;
+  title: string;
+  description?: string;
+  status: "todo" | "doing" | "done";
+  priority: "low" | "medium" | "high";
+  hours: number;
+  projectId: string;
+  userId: string;
+  startDate?: string;
+  endDate?: string;
+}
 
 interface Props {
   projectId: string;
   projectTitle: string;
 }
-
-const DEFAULT_STEPS: CreateStepData[] = [
-  { title: "Configuration environnement", priority: "high", hours: 2 },
-  { title: "Analyse des exigences", priority: "high", hours: 3 },
-  { title: "Conception architecture", priority: "medium", hours: 4 },
-  { title: "Développement principal", priority: "high", hours: 8 },
-  { title: "Tests et débogage", priority: "medium", hours: 3 },
-  { title: "Documentation", priority: "low", hours: 2 },
-];
 
 export default function BackendProgressTracker({
   projectId,
@@ -69,82 +70,153 @@ export default function BackendProgressTracker({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [newStep, setNewStep] = useState<CreateStepData>({
+  const [isAdding, setIsAdding] = useState(false);
+  const [newStep, setNewStep] = useState({
     title: "",
+    description: "",
     hours: 1,
-    priority: "medium",
+    priority: "medium" as "low" | "medium" | "high",
   });
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   const handlePrint = () => window.print();
 
   useEffect(() => {
-    loadSteps();
+    loadData();
   }, [projectId]);
 
-  const loadSteps = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await stepsAPI.getSteps(projectId);
-      if (data.length === 0) {
-        await createDefaultSteps();
-      } else {
-        setSteps(data);
+
+      if (!user._id) {
+        throw new Error("Utilisateur non connecté. Veuillez vous connecter.");
       }
+
+      const tasksRes = await fetch(
+        `/api/projects/${projectId}/tasks?userId=${user._id}`
+      );
+      if (!tasksRes.ok) {
+        const errorData = await tasksRes.json();
+        throw new Error(
+          errorData.message || "Erreur lors du chargement des tâches"
+        );
+      }
+      const tasksData = await tasksRes.json();
+      setSteps(Array.isArray(tasksData) ? tasksData : []);
     } catch (err: any) {
-      setError(err.message || "Erreur lors du chargement des étapes");
+      setError(err.message || "Erreur lors du chargement des données");
+      console.error("Erreur loadData:", err);
+      toast({
+        title: "Erreur",
+        description: err.message || "Erreur serveur",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const createDefaultSteps = async () => {
-    try {
-      const createdSteps: Step[] = [];
-      for (const stepData of DEFAULT_STEPS) {
-        const step = await stepsAPI.createStep(projectId, stepData);
-        createdSteps.push(step);
-      }
-      setSteps(createdSteps);
-    } catch (err: any) {
-      setError("Erreur lors de la création des étapes par défaut");
-    }
-  };
-
-  const updateStep = async (stepId: string, updates: UpdateStepData) => {
-    try {
-      const updatedStep = await stepsAPI.updateStep(projectId, stepId, updates);
-      setSteps((prev) =>
-        prev.map((step) => (step._id === stepId ? updatedStep : step))
-      );
-    } catch (err: any) {
-      setError(err.message || "Erreur lors de la mise à jour");
-    }
-  };
-
   const addStep = async () => {
-    if (!newStep.title.trim()) return;
+    if (!newStep.title.trim()) {
+      toast({
+        title: "Erreur",
+        description: "Le titre est requis",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!user._id) {
+      toast({
+        title: "Erreur",
+        description: "Utilisateur non connecté",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAdding(true);
     try {
-      const step = await stepsAPI.createStep(projectId, newStep);
-      setSteps((prev) => [...prev, step]);
-      setNewStep({ title: "", hours: 1, priority: "medium" });
-      setShowAddDialog(false);
+      const res = await fetch(`/api/projects/${projectId}/tasks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user._id,
+          title: newStep.title,
+          description: newStep.description,
+          priority: newStep.priority,
+          hours: newStep.hours,
+        }),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        await loadData();
+        setNewStep({
+          title: "",
+          description: "",
+          hours: 1,
+          priority: "medium",
+        });
+        setShowAddDialog(false);
+        toast({ title: "Succès", description: "Étape ajoutée avec succès" });
+      } else {
+        toast({
+          title: "Erreur",
+          description: data.message || "Erreur lors de l'ajout",
+          variant: "destructive",
+        });
+      }
     } catch (err: any) {
       setError(err.message || "Erreur lors de l'ajout");
+      toast({
+        title: "Erreur",
+        description: err.message || "Erreur serveur",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAdding(false);
     }
   };
 
   const deleteStep = async (stepId: string) => {
     try {
-      await stepsAPI.deleteStep(projectId, stepId);
-      setSteps((prev) => prev.filter((step) => step._id !== stepId));
+      const res = await fetch(`/api/projects/${projectId}/tasks`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId: stepId }),
+      });
+      if (res.ok) {
+        await loadData();
+        toast({ title: "Succès", description: "Étape supprimée" });
+      } else {
+        const data = await res.json();
+        toast({
+          title: "Erreur",
+          description: data.message || "Erreur lors de la suppression",
+          variant: "destructive",
+        });
+      }
     } catch (err: any) {
       setError(err.message || "Erreur lors de la suppression");
+      toast({
+        title: "Erreur",
+        description: err.message || "Erreur serveur",
+        variant: "destructive",
+      });
     }
   };
 
+  const handleProjectCompleted = () => {
+    toast({
+      title: "Félicitations !",
+      description: `Le projet "${projectTitle}" est terminé !`,
+    });
+  };
+
   const stats = {
-    total: steps.length,
+    total: steps.length || 0,
     done: steps.filter((s) => s.status === "done").length,
     doing: steps.filter((s) => s.status === "doing").length,
     totalHours: steps.reduce((sum, s) => sum + s.hours, 0),
@@ -154,17 +226,7 @@ export default function BackendProgressTracker({
   };
 
   const progress = stats.total > 0 ? (stats.done / stats.total) * 100 : 0;
-
-  const getStatusIcon = (status: Step["status"]) => {
-    switch (status) {
-      case "done":
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case "doing":
-        return <Clock className="h-4 w-4 text-blue-600" />;
-      default:
-        return <Clock className="h-4 w-4 text-gray-400" />;
-    }
-  };
+  const allTasksDone = stats.total > 0 && stats.done === stats.total;
 
   const getPriorityColor = (priority: Step["priority"]) => {
     switch (priority) {
@@ -174,17 +236,6 @@ export default function BackendProgressTracker({
         return "bg-yellow-100 text-yellow-800";
       case "low":
         return "bg-green-100 text-green-800";
-    }
-  };
-
-  const getStatusText = (status: Step["status"]) => {
-    switch (status) {
-      case "todo":
-        return "À faire";
-      case "doing":
-        return "En cours";
-      case "done":
-        return "Terminé";
     }
   };
 
@@ -218,23 +269,20 @@ export default function BackendProgressTracker({
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5" />
-              Suivi des étapes - {projectTitle}
+              <Target className="h-5 w-5" /> Suivi des étapes - {projectTitle}
             </CardTitle>
             <p className="text-sm text-gray-600 mt-1">
               Connecté au backend - Données synchronisées
             </p>
           </div>
-
           <div className="flex gap-2 no-print">
             <Button variant="outline" onClick={handlePrint}>
               🖨️ Imprimer
             </Button>
             <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
               <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Ajouter
+                <Button disabled={!!error}>
+                  <Plus className="h-4 w-4 mr-2" /> Ajouter
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -250,6 +298,16 @@ export default function BackendProgressTracker({
                         setNewStep({ ...newStep, title: e.target.value })
                       }
                       placeholder="Nom de l'étape"
+                    />
+                  </div>
+                  <div>
+                    <Label>Description (optionnel)</Label>
+                    <Input
+                      value={newStep.description}
+                      onChange={(e) =>
+                        setNewStep({ ...newStep, description: e.target.value })
+                      }
+                      placeholder="Description de l'étape"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -298,14 +356,18 @@ export default function BackendProgressTracker({
                   >
                     Annuler
                   </Button>
-                  <Button onClick={addStep}>Ajouter</Button>
+                  <Button onClick={addStep} disabled={isAdding}>
+                    {isAdding ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : null}{" "}
+                    Ajouter
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
           </div>
         </div>
       </CardHeader>
-
       <CardContent>
         {error && (
           <Alert className="mb-4" variant="destructive">
@@ -313,8 +375,12 @@ export default function BackendProgressTracker({
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-
-        {/* Statistiques */}
+        {allTasksDone && (
+          <div className="mt-6 bg-green-100 text-green-800 border border-green-300 rounded-lg p-4 text-center flex items-center justify-center gap-2">
+            <CheckCircle className="w-6 h-6" />
+            <span className="font-semibold">Projet terminé 🎉</span>
+          </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <Card>
             <CardContent className="p-4">
@@ -365,8 +431,6 @@ export default function BackendProgressTracker({
             </CardContent>
           </Card>
         </div>
-
-        {/* Barre de progression */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium">Progression globale</span>
@@ -381,8 +445,6 @@ export default function BackendProgressTracker({
             />
           </div>
         </div>
-
-        {/* Tableau des étapes */}
         <Table>
           <TableHeader>
             <TableRow>
@@ -399,26 +461,23 @@ export default function BackendProgressTracker({
               <TableRow key={step._id}>
                 <TableCell>
                   <div className="flex items-center gap-3">
-                    {getStatusIcon(step.status)}
-                    <span className="font-medium">{step.title}</span>
+                    <div>
+                      <span className="font-medium">{step.title}</span>
+                      {step.description && (
+                        <p className="text-sm text-gray-600">
+                          {step.description}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Select
-                    value={step.status}
-                    onValueChange={(value) =>
-                      updateStep(step._id!, { status: value as Step["status"] })
-                    }
-                  >
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todo">À faire</SelectItem>
-                      <SelectItem value="doing">En cours</SelectItem>
-                      <SelectItem value="done">Terminé</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <TaskStatusUpdater
+                    taskId={step._id}
+                    projectId={projectId}
+                    currentStatus={step.status}
+                    onProjectCompleted={handleProjectCompleted}
+                  />
                 </TableCell>
                 <TableCell>
                   <Badge className={getPriorityColor(step.priority)}>
@@ -441,19 +500,26 @@ export default function BackendProgressTracker({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => deleteStep(step._id!)}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    Supprimer
-                  </Button>
+                  {step.userId === user._id && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => deleteStep(step._id)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      Supprimer
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+        {steps.length === 0 && (
+          <p className="text-center text-gray-600 mt-4">
+            Aucune étape créée pour ce projet. Ajoutez-en une pour commencer !
+          </p>
+        )}
       </CardContent>
     </Card>
   );

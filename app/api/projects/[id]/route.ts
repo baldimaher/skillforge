@@ -1,45 +1,32 @@
 import { NextResponse } from "next/server";
 import Project from "../../../../models/Project";
 import connectDB from "../../../../lib/mongo";
+import mongoose from "mongoose";
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> } // Use Promise for params
-) {
-  await connectDB();
-
+export async function GET(req: Request) {
   try {
-    const { id } = await params; // Await the params object
-    const project = await Project.findById(id).lean();
+    await connectDB();
+
+    // Extraire l'id de l'URL
+    const url = new URL(req.url);
+    const paths = url.pathname.split("/");
+    const id = paths[paths.length - 1]; // dernier segment, soit l'id
+
+    console.log("ID reçu dans API :", id);
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ error: "ID invalide" }, { status: 400 });
+    }
+
+    const project = await Project.findById(id);
 
     if (!project) {
-      return NextResponse.json(
-        { message: "Projet non trouvé" },
-        { status: 404 }
-      );
-    }
-    if (project.takenBy.toString() !== task.userId.toString()) {
-      return NextResponse.json(
-        { message: "Vous n'êtes pas autorisé à supprimer cette tâche" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Projet non trouvé" }, { status: 404 });
     }
 
-    await Task.findByIdAndDelete(taskId);
-
-    const tasks = await Task.find({ projectId: params.id, userId: task.userId });
-    const allTasksDone = tasks.every((t) => t.status === "done");
-    if (allTasksDone && project.status !== "terminé") {
-      project.status = "terminé";
-      await project.save();
-    } else if (!tasks.length && project.status === "terminé") {
-      project.status = "en cours"; // Revert to "en cours" if no tasks remain
-      await project.save();
-    }
-
-    return NextResponse.json({ message: "Tâche supprimée" });
+    return NextResponse.json(project);
   } catch (error) {
-    console.error("Erreur récupération projet :", error);
-    return NextResponse.json({ message: "Erreur serveur" }, { status: 500 });
+    console.error("Erreur dans API projects/[id] :", error);
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

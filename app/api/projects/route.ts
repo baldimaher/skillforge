@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import Project from "../../../models/Project";
+import { Types } from "mongoose";
 import connectDB from "../../../lib/mongo";
 
 export async function GET() {
@@ -11,7 +12,6 @@ export async function GET() {
     return NextResponse.json({ message: "Erreur serveur" }, { status: 500 });
   }
 }
-
 export async function POST(request: Request) {
   try {
     await connectDB();

@@ -14,7 +14,7 @@ const inter = Inter({ subsets: ['latin'] });
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const isPublicPage = pathname === '/' || pathname === '/signup';
+  const isPublicPage = pathname === '/' || pathname === '/signup' || pathname == '/forgot-password'|| pathname == '/reset-password';
 
   return (
     <html lang="fr">

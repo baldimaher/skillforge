@@ -1,17 +1,16 @@
 import { NextResponse } from "next/server";
-import mongoose from "mongoose";
 import Project from "@/models/Project";
 import Task from "@/models/task";
 import connectDB from "@/lib/mongo";
 
+interface Params {
+  params: { id: string };
+}
+
 // GET: Récupérer les tâches d'un projet pour l'utilisateur connecté
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: Params) {
   await connectDB();
   try {
-    if (!mongoose.Types.ObjectId.isValid(params.id)) {
-      return NextResponse.json({ message: "ID de projet invalide" }, { status: 400 });
-    }
-
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get("userId");
     if (!userId) {
@@ -32,17 +31,13 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 }
 
 // POST: Créer une nouvelle tâche
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params }: Params) {
   await connectDB();
   try {
-    if (!mongoose.Types.ObjectId.isValid(params.id)) {
-      return NextResponse.json({ message: "ID de projet invalide" }, { status: 400 });
-    }
-
     const { userId, title, description, priority, hours } = await request.json();
-    if (!userId || !title) {
+    if (!userId || !title || !params.id) {
       return NextResponse.json(
-        { message: "userId et titre sont obligatoires" },
+        { message: "userId, titre et projectId sont obligatoires" },
         { status: 400 }
       );
     }
@@ -73,9 +68,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     await task.save();
 
-    // Vérifier si toutes les tâches du projet sont terminées
+    // Vérification globale (toutes les tâches du projet)
     const allTasks = await Task.find({ projectId: params.id });
-    const allDone = allTasks.length > 0 && allTasks.every((t) => t.status === "done");
+    const allDone = allTasks.length > 0 && allTasks.every(t => t.status === "done");
 
     if (allDone && project.status !== "terminé") {
       project.status = "terminé";
@@ -96,13 +91,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
 }
 
 // PUT: Mettre à jour une tâche
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+
+export async function PUT(request: Request, { params }: Params) {
   await connectDB();
   try {
-    if (!mongoose.Types.ObjectId.isValid(params.id)) {
-      return NextResponse.json({ message: "ID de projet invalide" }, { status: 400 });
-    }
-
     const { taskId, status, title, description, priority, hours } = await request.json();
     if (!taskId) {
       return NextResponse.json({ message: "taskId est obligatoire" }, { status: 400 });
@@ -166,13 +158,9 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 }
 
 // DELETE: Supprimer une tâche
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: Params) {
   await connectDB();
   try {
-    if (!mongoose.Types.ObjectId.isValid(params.id)) {
-      return NextResponse.json({ message: "ID de projet invalide" }, { status: 400 });
-    }
-
     const { taskId } = await request.json();
     if (!taskId) {
       return NextResponse.json({ message: "taskId est obligatoire" }, { status: 400 });
@@ -196,9 +184,8 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
 
     await Task.findByIdAndDelete(taskId);
 
-    // Vérifier si toutes les tâches du projet sont terminées
     const allTasks = await Task.find({ projectId: params.id });
-    const allDone = allTasks.length > 0 && allTasks.every((t) => t.status === "done");
+    const allDone = allTasks.length > 0 && allTasks.every(t => t.status === "done");
 
     if (allDone && project.status !== "terminé") {
       project.status = "terminé";
@@ -208,7 +195,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
       await project.save();
     }
 
-    return NextResponse.json({ message: "Tâche supprimée" }, { status: 200 });
+    return NextResponse.json({ message: "Tâche supprimée" });
   } catch (error) {
     console.error("Erreur lors de la suppression de la tâche :", error);
     return NextResponse.json(

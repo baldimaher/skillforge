@@ -278,5 +278,4 @@ export default function ProjectsPage() {
 
       {message && <p className="text-red-600 text-center mt-4">{message}</p>}
     </div>
-  );
-}
+  )};

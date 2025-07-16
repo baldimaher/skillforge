@@ -1,10 +1,10 @@
 // app/api/user/[id]/route.ts
 
+import "@/models/Certificate";
+
 import { NextRequest } from "next/server";
 import User from "@/models/User";
 import dbConnect from "@/lib/mongo";
-import User from "@/models/User";
-import "@/models/Certificate";
 
 export async function GET(
   req: NextRequest,
@@ -12,7 +12,8 @@ export async function GET(
 ) {
   await dbConnect();
 
-    const { id } = context.params; // ✅ Déstructuration ici
+  try {
+    const { id } = context.params;
 
     const user = await User.findById(id)
       .populate("certificates")
