@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import dbConnect from "@/lib/mongo";
+
 import User from "@/models/User";
 import bcrypt from "bcryptjs";
+import dbConnect from "@/lib/mongo";
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,7 +11,7 @@ export async function POST(req: NextRequest) {
     const { email, password } = await req.json();
 
     if (!email || !password) {
-      return NextResponse.json({ error: "Champs manquants" }, { status: 400 });
+      return NextResponse.json({ error: "Chammmps manquants" }, { status: 400 });
     }
 
     const user = await User.findOne({ email });
