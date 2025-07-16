@@ -36,8 +36,13 @@ export default function LoginPage() {
         localStorage.setItem("quizzes", JSON.stringify(fullUser.quizzes || []));
         localStorage.setItem("certificates", JSON.stringify(fullUser.certificates || []));
 
-        // ✅ Redirection vers /dashboard pour tous
-        router.push("/dashboard");
+        // Redirection conditionnelle basée sur le rôle
+        const userRole = fullUser.role;
+        if (userRole === "admin") {
+          router.push("/admin/progress");
+        } else {
+          router.push("/dashboard");
+        }
       } else {
         setError(data.message || "Erreur lors de la connexion");
       }
@@ -86,11 +91,12 @@ export default function LoginPage() {
               <label className="flex items-center gap-2">
                 <input type="checkbox" className="accent-indigo-500" />
                 Se souvenir de moi
-              </label>
-              <a href="#" className="hover:underline text-indigo-600">
-                Mot de passe oublié ?
-              </a>
-            </div>
+                </label>
+                <a href="/forgot-password" className="hover:underline text-indigo-600">
+  Mot de passe oublié ?
+</a>
+
+         </div>
             <button
               type="submit"
               disabled={loading}

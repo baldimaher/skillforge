@@ -3,9 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
-  Award,
   BookOpen,
-  Calendar,
   CheckCircle,
   Clock,
   Code2,
@@ -14,22 +12,19 @@ import {
   Target,
   TrendingUp,
   Trophy,
-  Users,
-  Zap,
+  Award,
 } from "lucide-react";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useEffect, useState } from "react";
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
+import { useEffect, useState, useCallback } from "react";
 
 interface User {
   _id: string;
@@ -87,16 +82,11 @@ export default function ProgressPage() {
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("overview");
 
-  useEffect(() => {
-    fetchProgressData();
-  }, []);
-
-  const fetchProgressData = async () => {
+  const fetchProgressData = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
 
-      // Récupérer l'ID utilisateur depuis localStorage
       const userId = localStorage.getItem("userId");
       if (!userId) {
         setError("Utilisateur non connecté");
@@ -104,7 +94,6 @@ export default function ProgressPage() {
         return;
       }
 
-      // Récupérer toutes les données en parallèle
       const [userRes, projectsRes, quizzesRes, formationsRes] =
         await Promise.all([
           fetch(`/api/user/${userId}`),
@@ -113,16 +102,10 @@ export default function ProgressPage() {
           fetch("/api/Formation"),
         ]);
 
-      if (!userRes.ok)
-        throw new Error(
-          "Erreur lors de la récupération des données utilisateur"
-        );
-      if (!projectsRes.ok)
-        throw new Error("Erreur lors de la récupération des projets");
-      if (!quizzesRes.ok)
-        throw new Error("Erreur lors de la récupération des quizzes");
-      if (!formationsRes.ok)
-        throw new Error("Erreur lors de la récupération des formations");
+      if (!userRes.ok) throw new Error("Erreur récupération utilisateur");
+      if (!projectsRes.ok) throw new Error("Erreur récupération projets");
+      if (!quizzesRes.ok) throw new Error("Erreur récupération quizzes");
+      if (!formationsRes.ok) throw new Error("Erreur récupération formations");
 
       const userData = await userRes.json();
       const projectsData = await projectsRes.json();
@@ -134,31 +117,22 @@ export default function ProgressPage() {
       setQuizzes(quizzesData);
       setFormations(formationsData);
     } catch (err) {
-      console.error("Erreur lors du chargement des données:", err);
+      console.error(err);
       setError(err instanceof Error ? err.message : "Erreur inconnue");
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    fetchProgressData();
+  }, [fetchProgressData]);
+
+  const refreshProgress = () => {
+    fetchProgressData();
   };
 
-  // Calculer les statistiques
-  const userProjects = projects.filter((p) => p.takenBy === user?._id);
-  const completedProjects = userProjects.filter((p) => p.status === "terminé");
-  const completedQuizzes = user?.quizzes?.length || 0;
-  const averageQuizScore = user?.quizzes?.length
-    ? user.quizzes.reduce((acc, q) => acc + q.score, 0) / user.quizzes.length
-    : 0;
-
-  const projectProgress =
-    Math.round((userProjects.length / projects.length) * 100) || 0;
-
-  const totalProgress =
-    Math.round(
-      ((completedProjects.length + completedQuizzes) /
-        (projects.length + quizzes.length)) *
-        100
-    ) || 0;
-
+  // Après loading et error, si user est null, on affiche un message simple
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
@@ -166,9 +140,7 @@ export default function ProgressPage() {
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="text-center">
               <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
-              <p className="text-gray-600">
-                Chargement de votre progression...
-              </p>
+              <p className="text-gray-600">Chargement de votre progression...</p>
             </div>
           </div>
         </div>
@@ -192,6 +164,37 @@ export default function ProgressPage() {
     );
   }
 
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+        <p className="text-gray-700 text-lg">Utilisateur non trouvé.</p>
+      </div>
+    );
+  }
+
+  // Maintenant user est garanti non nul, on peut accéder sans erreurs TS
+
+  const userProjects = projects.filter((p) => p.takenBy === user._id);
+  const completedProjects = userProjects.filter((p) => p.status === "terminé");
+
+  const completedQuizzes = user.quizzes.length;
+
+  const averageQuizScore = user.quizzes.length
+    ? user.quizzes.reduce((acc, q) => acc + q.score, 0) / user.quizzes.length
+    : 0;
+
+  const projectsProgress = projects.length
+    ? Math.min((completedProjects.length / projects.length) * 100, 100)
+    : 0;
+
+  const quizzesProgress = quizzes.length
+    ? Math.min((completedQuizzes / quizzes.length) * 100, 100)
+    : 0;
+
+  const totalProgress = Math.round(
+    Math.min((projectsProgress + quizzesProgress) / 2, 100)
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       {/* Header */}
@@ -206,15 +209,13 @@ export default function ProgressPage() {
                 </Button>
               </Link>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  Mon Progrès
-                </h1>
+                <h1 className="text-2xl font-bold text-gray-900">Mon Progrès</h1>
                 <p className="text-gray-600">
-                  Bienvenue, {user?.firstName} {user?.lastName}
+                  Bienvenue, {user.firstName} {user.lastName}
                 </p>
               </div>
             </div>
-            <Button onClick={fetchProgressData} variant="outline" size="sm">
+            <Button onClick={refreshProgress} variant="outline" size="sm">
               <RefreshCw className="w-4 h-4 mr-2" />
               Actualiser
             </Button>
@@ -223,7 +224,7 @@ export default function ProgressPage() {
       </div>
 
       <div className="max-w-7xl mx-auto p-6">
-        {/* Navigation Tabs */}
+        {/* Tabs */}
         <div className="flex space-x-1 bg-white rounded-lg p-1 mb-8 shadow-sm">
           {[
             { id: "overview", label: "Vue d'ensemble", icon: TrendingUp },
@@ -257,8 +258,9 @@ export default function ProgressPage() {
               transition={{ duration: 0.3 }}
               className="space-y-6"
             >
-              {/* Progress Overview */}
+              {/* Progress overview cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Projets */}
                 <motion.div
                   key="projects"
                   initial={{ opacity: 0, y: 30 }}
@@ -278,16 +280,14 @@ export default function ProgressPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-3xl font-bold mb-2">
-                      {userProjects.length} / {projects.length} projets pris
+                      {completedProjects.length} / {projects.length} terminés
                     </div>
-                    <Progress
-                      value={projectProgress}
-                      className="h-2 bg-blue-400"
-                    />
+                    <Progress value={projectsProgress} className="h-2 bg-blue-400" />
                     <p className="text-blue-100 text-sm mt-2">Terminés</p>
                   </CardContent>
                 </motion.div>
 
+                {/* Quizzes */}
                 <motion.div
                   key="quizzes"
                   initial={{ opacity: 0, y: 30 }}
@@ -317,6 +317,7 @@ export default function ProgressPage() {
                   </CardContent>
                 </motion.div>
 
+                {/* Score moyen */}
                 <motion.div
                   key="averageQuizScore"
                   initial={{ opacity: 0, y: 30 }}
@@ -345,6 +346,7 @@ export default function ProgressPage() {
                   </CardContent>
                 </motion.div>
 
+                {/* Progression totale */}
                 <motion.div
                   key="totalProgress"
                   initial={{ opacity: 0, y: 30 }}
@@ -363,19 +365,14 @@ export default function ProgressPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold mb-2">
-                      {totalProgress}%
-                    </div>
-                    <Progress
-                      value={totalProgress}
-                      className="h-2 bg-orange-400"
-                    />
+                    <div className="text-3xl font-bold mb-2">{totalProgress}%</div>
+                    <Progress value={totalProgress} className="h-2 bg-orange-400" />
                     <p className="text-orange-100 text-sm mt-2">Global</p>
                   </CardContent>
                 </motion.div>
               </div>
 
-              {/* Recent Activity */}
+              {/* Activité récente */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center">
@@ -385,8 +382,8 @@ export default function ProgressPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {user?.quizzes
-                      ?.slice(-3)
+                    {user.quizzes
+                      .slice(-3)
                       .reverse()
                       .map((quiz, index) => (
                         <div
@@ -419,9 +416,7 @@ export default function ProgressPage() {
                           </div>
                           <div>
                             <p className="font-medium">Projet terminé</p>
-                            <p className="text-sm text-gray-600">
-                              {project.title}
-                            </p>
+                            <p className="text-sm text-gray-600">{project.title}</p>
                           </div>
                         </div>
                         <Badge variant="secondary">Terminé</Badge>
@@ -433,323 +428,122 @@ export default function ProgressPage() {
             </motion.div>
           )}
 
+          {/* Onglet Projets */}
           {activeTab === "projects" && (
             <motion.div
-              key="projects"
+              key="projectsTab"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
+              className="space-y-6"
             >
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Code2 className="w-5 h-5 mr-2" />
-                    Mes Projets ({userProjects.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {userProjects.map((project) => (
-                      <Card
-                        key={project._id}
-                        className="hover:shadow-lg transition-shadow"
-                      >
-                        <CardHeader>
-                          <CardTitle className="text-lg">
-                            {project.title}
-                          </CardTitle>
-                          <CardDescription>
-                            {project.technologies.join(", ")}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-600">
-                                Difficulté:
-                              </span>
-                              <Badge
-                                variant={
-                                  project.difficulty === "Beginner"
-                                    ? "secondary"
-                                    : project.difficulty === "Intermediate"
-                                    ? "default"
-                                    : "destructive"
-                                }
-                              >
-                                {project.difficulty}
-                              </Badge>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-600">
-                                Statut:
-                              </span>
-                              <Badge
-                                variant={
-                                  project.status === "terminé"
-                                    ? "default"
-                                    : project.status === "en cours"
-                                    ? "secondary"
-                                    : "outline"
-                                }
-                              >
-                                {project.status}
-                              </Badge>
-                            </div>
-                            <div className="pt-2">
-                              <p className="text-sm text-gray-600 mb-2">
-                                Objectifs:
-                              </p>
-                              <div className="space-y-1">
-                                {project.objectives
-                                  .slice(0, 2)
-                                  .map((objective, index) => (
-                                    <div
-                                      key={index}
-                                      className="flex items-center text-xs text-gray-500"
-                                    >
-                                      <CheckCircle className="w-3 h-3 mr-1 text-green-500" />
-                                      {objective}
-                                    </div>
-                                  ))}
-                                {project.objectives.length > 2 && (
-                                  <p className="text-xs text-gray-400">
-                                    +{project.objectives.length - 2} autres
-                                    objectifs
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+              <h2 className="text-xl font-bold mb-4">Mes Projets</h2>
+              {userProjects.length === 0 ? (
+                <p>Aucun projet pris.</p>
+              ) : (
+                <ul>
+                  {userProjects.map((p) => (
+                    <li
+                      key={p._id}
+                      className="mb-2 p-3 border rounded bg-white shadow-sm"
+                    >
+                      <h3 className="font-semibold">{p.title}</h3>
+                      <p>Status: {p.status}</p>
+                      <p>Difficulté: {p.difficulty}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </motion.div>
           )}
 
+          {/* Onglet Quizzes */}
           {activeTab === "quizzes" && (
             <motion.div
-              key="quizzes"
+              key="quizzesTab"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
+              className="space-y-6"
             >
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <BookOpen className="w-5 h-5 mr-2" />
-                    Mes Quizzes ({completedQuizzes}/{quizzes.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {user?.quizzes?.map((userQuiz, index) => {
-                      const quiz = quizzes.find((q) => q._id === userQuiz.quiz);
-                      return (
-                        <Card
-                          key={index}
-                          className="hover:shadow-lg transition-shadow"
-                        >
-                          <CardHeader>
-                            <CardTitle className="text-lg">
-                              {quiz?.title || "Quiz"}
-                            </CardTitle>
-                            <CardDescription>
-                              {quiz?.description ||
-                                "Description non disponible"}
-                            </CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="space-y-3">
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600">
-                                  Score:
-                                </span>
-                                <Badge
-                                  variant={
-                                    userQuiz.score >= 90
-                                      ? "default"
-                                      : userQuiz.score >= 70
-                                      ? "secondary"
-                                      : "destructive"
-                                  }
-                                >
-                                  {userQuiz.score}%
-                                </Badge>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600">
-                                  Date:
-                                </span>
-                                <span className="text-sm text-gray-500">
-                                  {new Date(userQuiz.date).toLocaleDateString()}
-                                </span>
-                              </div>
-                              <div className="pt-2">
-                                <div className="flex items-center justify-center">
-                                  {userQuiz.score >= 90 ? (
-                                    <div className="text-center">
-                                      <span className="text-4xl mb-2">🏆</span>
-                                      <p className="font-semibold text-yellow-800">
-                                        Expert Quiz
-                                      </p>
-                                      <p className="text-xs text-yellow-700">
-                                        Score &gt; 90%
-                                      </p>
-                                    </div>
-                                  ) : userQuiz.score >= 70 ? (
-                                    <div className="text-center">
-                                      <span className="text-4xl mb-2">🥈</span>
-                                      <p className="font-semibold text-gray-800">
-                                        Bon Score
-                                      </p>
-                                      <p className="text-xs text-gray-600">
-                                        Score &gt; 70%
-                                      </p>
-                                    </div>
-                                  ) : (
-                                    <div className="text-center">
-                                      <span className="text-4xl mb-2">📚</span>
-                                      <p className="font-semibold text-blue-800">
-                                        À améliorer
-                                      </p>
-                                      <p className="text-xs text-blue-600">
-                                        Score &lt; 70%
-                                      </p>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
+              <h2 className="text-xl font-bold mb-4">Mes Quizzes</h2>
+              {(user.quizzes.length ?? 0) === 0 ? (
+                <p>Aucun quiz passé.</p>
+              ) : (
+                <ul>
+                  {user.quizzes.map((q, i) => (
+                    <li
+                      key={i}
+                      className="mb-2 p-3 border rounded bg-white shadow-sm"
+                    >
+                      <h3>{q.title || "Quiz sans titre"}</h3>
+                      <p>Score: {q.score}%</p>
+                      <p>Date: {new Date(q.date).toLocaleDateString()}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </motion.div>
           )}
 
+          {/* Onglet Formations */}
           {activeTab === "formations" && (
             <motion.div
-              key="formations"
+              key="formationsTab"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
+              className="space-y-6"
             >
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Target className="w-5 h-5 mr-2" />
-                    Formations Disponibles ({formations.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {formations.map((formation) => (
-                      <Card
-                        key={formation._id}
-                        className="hover:shadow-lg transition-shadow"
-                      >
-                        <CardHeader>
-                          <CardTitle className="text-lg">
-                            {formation.title}
-                          </CardTitle>
-                          <CardDescription>
-                            {formation.description}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-600">
-                                Niveau:
-                              </span>
-                              <Badge variant="outline">{formation.level}</Badge>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-600">
-                                Durée:
-                              </span>
-                              <span className="text-sm text-gray-500">
-                                {formation.duration}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-600">
-                                Catégorie:
-                              </span>
-                              <Badge variant="secondary">
-                                {formation.category}
-                              </Badge>
-                            </div>
-                            <Button className="w-full" variant="outline">
-                              Commencer
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+              <h2 className="text-xl font-bold mb-4">Formations disponibles</h2>
+              {formations.length === 0 ? (
+                <p>Aucune formation disponible.</p>
+              ) : (
+                <ul>
+                  {formations.map((f) => (
+                    <li
+                      key={f._id}
+                      className="mb-2 p-3 border rounded bg-white shadow-sm"
+                    >
+                      <h3>{f.title}</h3>
+                      <p>Durée: {f.duration}</p>
+                      <p>Niveau: {f.level}</p>
+                      <p>{f.description}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </motion.div>
           )}
 
+          {/* Onglet Compétences */}
           {activeTab === "skills" && (
             <motion.div
-              key="skills"
+              key="skillsTab"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
+              className="space-y-6"
             >
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Award className="w-5 h-5 mr-2" />
-                    Mes Compétences ({user?.skills?.length || 0})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                      {user?.skills?.map((skill, index) => (
-                        <Badge
-                          key={index}
-                          variant="outline"
-                          className="text-center py-2"
-                        >
-                          {skill}
-                        </Badge>
-                      ))}
-                    </div>
-
-                    {user?.cvUrl && (
-                      <div className="bg-blue-50 p-4 rounded-lg">
-                        <h3 className="font-semibold text-blue-900 mb-2">
-                          CV Uploadé
-                        </h3>
-                        <p className="text-blue-700 text-sm mb-3">
-                          Votre CV a été analysé et les compétences ont été
-                          extraites automatiquement.
-                        </p>
-                        <Button variant="outline" size="sm">
-                          <Zap className="w-4 h-4 mr-2" />
-                          Voir le CV
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+              <h2 className="text-xl font-bold mb-4">Mes Compétences</h2>
+              {(user.skills?.length ?? 0) === 0 ? (
+                <p>Aucune compétence renseignée.</p>
+              ) : (
+                <ul className="flex flex-wrap gap-2">
+                  {user.skills.map((skill, i) => (
+                    <li
+                      key={i}
+                      className="bg-blue-200 text-blue-900 px-3 py-1 rounded-full text-sm"
+                    >
+                      {skill}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

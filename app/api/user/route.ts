@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import User from "../../../models/User";
+import Certificate from "@/models/Certificate";
 import dbConnect from "../../../lib/mongo";
 
 export async function POST(req: NextRequest) {

@@ -86,7 +86,6 @@ export default function BackendProgressTracker({
       setLoading(true);
       setError(null);
       const data = await stepsAPI.getSteps(projectId);
-
       if (data.length === 0) {
         await createDefaultSteps();
       } else {
@@ -94,7 +93,6 @@ export default function BackendProgressTracker({
       }
     } catch (err: any) {
       setError(err.message || "Erreur lors du chargement des étapes");
-      console.error("Erreur:", err);
     } finally {
       setLoading(false);
     }
@@ -110,7 +108,6 @@ export default function BackendProgressTracker({
       setSteps(createdSteps);
     } catch (err: any) {
       setError("Erreur lors de la création des étapes par défaut");
-      console.error("Erreur:", err);
     }
   };
 
@@ -122,13 +119,11 @@ export default function BackendProgressTracker({
       );
     } catch (err: any) {
       setError(err.message || "Erreur lors de la mise à jour");
-      console.error("Erreur:", err);
     }
   };
 
   const addStep = async () => {
     if (!newStep.title.trim()) return;
-
     try {
       const step = await stepsAPI.createStep(projectId, newStep);
       setSteps((prev) => [...prev, step]);
@@ -136,7 +131,6 @@ export default function BackendProgressTracker({
       setShowAddDialog(false);
     } catch (err: any) {
       setError(err.message || "Erreur lors de l'ajout");
-      console.error("Erreur:", err);
     }
   };
 
@@ -146,7 +140,6 @@ export default function BackendProgressTracker({
       setSteps((prev) => prev.filter((step) => step._id !== stepId));
     } catch (err: any) {
       setError(err.message || "Erreur lors de la suppression");
-      console.error("Erreur:", err);
     }
   };
 
@@ -321,6 +314,7 @@ export default function BackendProgressTracker({
           </Alert>
         )}
 
+        {/* Statistiques */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <Card>
             <CardContent className="p-4">
@@ -372,6 +366,7 @@ export default function BackendProgressTracker({
           </Card>
         </div>
 
+        {/* Barre de progression */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium">Progression globale</span>
@@ -387,6 +382,7 @@ export default function BackendProgressTracker({
           </div>
         </div>
 
+        {/* Tableau des étapes */}
         <Table>
           <TableHeader>
             <TableRow>
@@ -458,16 +454,6 @@ export default function BackendProgressTracker({
             ))}
           </TableBody>
         </Table>
-
-        {/* Message de projet terminé */}
-        {stats.total > 0 && stats.done === stats.total && (
-          <div className="mt-6 bg-green-100 text-green-800 border border-green-300 rounded-lg p-4 text-center flex items-center justify-center gap-2">
-            <CheckCircle className="w-6 h-6" />
-            <span className="font-semibold">
-              Félicitations ! Le projet <strong>"{projectTitle}"</strong> est terminé 🎉
-            </span>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
