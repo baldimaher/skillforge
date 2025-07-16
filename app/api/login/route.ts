@@ -1,6 +1,8 @@
-import { NextResponse } from "next/server";
-import User from "../../../models/User";
-import dbConnect from "../../../lib/mongo";
+import { NextRequest, NextResponse } from "next/server";
+
+import User from "@/models/User";
+import bcrypt from "bcryptjs";
+import dbConnect from "@/lib/mongo";
 
 export async function POST(request: Request) {
   await dbConnect();
@@ -10,9 +12,9 @@ export async function POST(request: Request) {
   console.log("Email reçu :", email);            // <-- ici
   console.log("Mot de passe reçu :", password);  // <-- ici
 
-  if (!email || !password) {
-    return NextResponse.json({ success: false, message: "Email et mot de passe requis" }, { status: 400 });
-  }
+    if (!email || !password) {
+      return NextResponse.json({ error: "Chammmps manquants" }, { status: 400 });
+    }
 
   const user = await User.findOne({ email }).select("+password");
   if (!user) {
