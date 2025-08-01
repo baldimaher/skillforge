@@ -1,6 +1,7 @@
 "use client";
 
 import Certificate, { openCertificateInNewTab } from "@/app/certificate/[quizId]/page";
+import { Download, Eye, FileText, Loader2, X } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -24,16 +25,14 @@ export default function MesCertificatsPage() {
   const [loading, setLoading] = useState(true);
   const [_id, setUserId] = useState<string | null>(null);
   const [user, setUser] = useState<UserType | null>(null);
-  const [showCertificate, setShowCertificate] = useState<string | null>(null); // ID du certificat à afficher
+  const [showCertificate, setShowCertificate] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    // Récupérer l'utilisateur depuis localStorage
     const userJson = localStorage.getItem("user");
     if (userJson) {
       try {
         const userData = JSON.parse(userJson);
-        console.log("Utilisateur chargé depuis localStorage :", userData);
         setUser(userData);
         setUserId(userData._id);
       } catch (err) {
@@ -41,7 +40,6 @@ export default function MesCertificatsPage() {
         setLoading(false);
       }
     } else {
-      console.warn("Utilisateur non trouvé dans localStorage");
       setLoading(false);
     }
   }, []);
@@ -50,20 +48,15 @@ export default function MesCertificatsPage() {
     if (!_id) return;
 
     async function fetchCertificats() {
-      console.log("Récupération certificats pour user ID :", _id);
-
       try {
         const res = await fetch(`/api/user/mesCertificat/${_id}`);
-
         if (res.status === 404) {
-          console.warn("Aucun certificat trouvé pour cet utilisateur");
           setCertificats([]);
         } else if (res.ok) {
           const data = await res.json();
-          console.log("Certificats reçus :", data);
           setCertificats(data);
         } else {
-          console.error("Erreur lors du fetch des certificats :", res.status);
+          console.error("Erreur serveur :", res.status);
         }
       } catch (error) {
         console.error("Erreur fetch certificats :", error);
@@ -75,7 +68,6 @@ export default function MesCertificatsPage() {
     fetchCertificats();
   }, [_id]);
 
-  // Fonction pour valider si l'URL est correcte
   const isValidUrl = (url: string) => {
     try {
       new URL(url);
@@ -85,7 +77,6 @@ export default function MesCertificatsPage() {
     }
   };
 
-  // Handle certificate display (même méthode que QuizzesPage)
   const handleShowCertificate = (certif: Certificate) => {
     if (!user) {
       setMessage("Erreur : Données utilisateur manquantes.");
@@ -95,7 +86,6 @@ export default function MesCertificatsPage() {
     setMessage(null);
   };
 
-  // Handle certificate download in new tab (même méthode que QuizzesPage)
   const handleOpenCertificateInNewTab = (certif: Certificate) => {
     if (!user) {
       setMessage("Erreur : Données utilisateur manquantes.");
@@ -105,85 +95,96 @@ export default function MesCertificatsPage() {
     setMessage(null);
   };
 
-  if (loading) return <p>Chargement...</p>;
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-60">
+        <Loader2 className="animate-spin w-6 h-6 text-blue-500" />
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Mes certificats</h1>
+    <div className="p-6 max-w-4xl mx-auto">
+      <h1 className="text-3xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+        <FileText className="w-7 h-7 text-blue-600" />
+        Mes certificats
+      </h1>
 
       {message && (
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg text-center mb-6">
+        <div className="bg-red-50 border border-red-300 text-red-700 p-4 rounded mb-6">
           {message}
         </div>
       )}
 
       {certificats.length === 0 ? (
-        <p>Aucun certificat trouvé.</p>
+        <p className="text-center text-gray-500">Aucun certificat trouvé.</p>
       ) : (
-        <ul className="space-y-5">
+        <ul className="space-y-6">
           {certificats.map((certif) => (
             <li
               key={certif._id}
-              className="border rounded-lg p-4 shadow-sm bg-white"
+              className="bg-white shadow rounded-lg p-5 hover:shadow-lg transition duration-300"
             >
-              <p className="font-semibold text-lg">Quiz : {certif.quizTitle}</p>
-              <p>Score : {certif.score}%</p>
-              <p>Date : {new Date(certif.date).toLocaleDateString()}</p>
-              
-              {/* Boutons d'action pour le certificat */}
-              <div className="mt-4 flex flex-wrap gap-4">
-                {/* Bouton pour afficher le certificat (même méthode que QuizzesPage) */}
+              <div className="mb-3">
+                <p className="text-lg font-semibold text-gray-800">
+                  Quiz : {certif.quizTitle}
+                </p>
+                <p className="text-sm text-gray-600">Score : {certif.score}%</p>
+                <p className="text-sm text-gray-500">
+                  Date : {new Date(certif.date).toLocaleDateString()}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-3 mt-4">
                 <Button
+                  className="bg-green-600 hover:bg-green-700 text-white"
                   onClick={() => handleShowCertificate(certif)}
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow"
                 >
-                  Afficher certificat
+                  <Eye className="mr-2 w-4 h-4" />
+                  Afficher
                 </Button>
 
-                {/* Bouton pour ouvrir le certificat dans un nouvel onglet */}
                 <Button
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
                   onClick={() => handleOpenCertificateInNewTab(certif)}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow"
                 >
-                  Voir certificat
+                  <Eye className="mr-2 w-4 h-4" />
+                  Voir dans un onglet
                 </Button>
 
-                {/* Liens existants pour le PDF si disponible */}
                 {certif.pdfUrl && isValidUrl(certif.pdfUrl) && (
                   <>
                     <a
                       href={certif.pdfUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 underline hover:text-blue-800"
-                      onError={() => alert("Erreur lors du chargement du certificat.")}
+                      className="text-blue-600 underline hover:text-blue-800 text-sm flex items-center"
                     >
+                      <Eye className="w-4 h-4 mr-1" />
                       Voir le PDF
                     </a>
                     <a
                       href={certif.pdfUrl}
                       download
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-green-600 underline hover:text-green-800"
-                      onError={() => alert("Erreur lors du téléchargement du certificat.")}
+                      className="text-green-600 underline hover:text-green-800 text-sm flex items-center"
                     >
-                      Télécharger le PDF
+                      <Download className="w-4 h-4 mr-1" />
+                      Télécharger PDF
                     </a>
                   </>
                 )}
               </div>
 
-              {/* Affichage du certificat si sélectionné */}
               {showCertificate === certif._id && user && (
-                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold">Certificat</h3>
+                <div className="mt-6 bg-gray-50 border rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="font-semibold text-lg">Aperçu du Certificat</h3>
                     <Button
-                      onClick={() => setShowCertificate(null)}
                       variant="outline"
                       size="sm"
+                      onClick={() => setShowCertificate(null)}
                     >
+                      <X className="w-4 h-4 mr-1" />
                       Fermer
                     </Button>
                   </div>
@@ -194,7 +195,6 @@ export default function MesCertificatsPage() {
                   />
                 </div>
               )}
-
             </li>
           ))}
         </ul>

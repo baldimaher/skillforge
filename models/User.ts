@@ -1,7 +1,6 @@
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 
-// Sous-schéma pour les résultats de quiz
 const QuizResultSchema = new mongoose.Schema({
   quiz: { type: mongoose.Schema.Types.ObjectId, ref: "Quiz" },
   score: Number,
@@ -9,7 +8,6 @@ const QuizResultSchema = new mongoose.Schema({
   title: String,
 });
 
-// Schéma principal utilisateur
 const userSchema = new mongoose.Schema(
   {
     email: { type: String, required: true, unique: true },
@@ -29,11 +27,15 @@ const userSchema = new mongoose.Schema(
     resetToken: { type: String, select: false },
     resetTokenExpire: { type: Date, select: false },
     lastLogin: { type: Date, default: Date.now },
+
+    // ➕ nouveau champ
+    isApproved: { type: Boolean, default: false },
   },
   {
     timestamps: true,
   }
 );
+
 
 // Middleware de hashage du mot de passe avant sauvegarde
 userSchema.pre("save", async function (next) {
@@ -51,8 +53,6 @@ userSchema.pre("save", async function (next) {
     next(err as Error);
   }
 });
-
-// Méthode pour comparer le mot de passe
 userSchema.methods.comparePassword = async function (candidatePassword: string): Promise<boolean> {
   return await bcrypt.compare(candidatePassword, this.password);
 };

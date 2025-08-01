@@ -7,12 +7,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { PlusCircle, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { Trash2 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 
 interface Project {
@@ -27,7 +27,7 @@ interface Project {
   createdAt: string;
   updatedAt: string;
   takenBy?: string;
-  takenAt?: string; // ✅ Ajouté pour vérifier les 7 jours
+  takenAt?: string;
 }
 
 export default function ProjectsPage() {
@@ -107,37 +107,6 @@ export default function ProjectsPage() {
     }
   };
 
-  const handleMarkAsComplete = async (projectId: string) => {
-    try {
-      const res = await fetch(`/api/projects/${projectId}/complete`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user._id }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        toast({
-          title: "Succès",
-          description: "Projet marqué comme terminé !",
-        });
-        fetchProjects();
-      } else {
-        toast({
-          title: "Erreur",
-          description:
-            data.message || "Erreur lors de la finalisation du projet",
-          variant: "destructive",
-        });
-      }
-    } catch (err) {
-      toast({
-        title: "Erreur",
-        description: "Erreur lors de la finalisation du projet",
-        variant: "destructive",
-      });
-    }
-  };
-
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case "Beginner":
@@ -152,44 +121,40 @@ export default function ProjectsPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto p-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Projets disponibles</h1>
-          <p className="text-slate-600">
-            Liste des projets en cours, terminés ou à venir
-          </p>
-        </div>
-        {isAdmin && (
-          <Link href="/projects/new">
-            <Button className="flex items-center gap-2">
-              <PlusCircle className="w-5 h-5" />
-              Lancer un projet
-            </Button>
-          </Link>
-        )}
+    <div className="space-y-9 max-w-7xl mx-auto p-8">
+      <div>
+        <h1 className="text-4xl font-bold tracking-tight text-gray-900">
+          Projets disponibles
+        </h1>
+        <p className="text-muted-foreground text-sm mt-1">
+          Découvrez les projets en cours, à venir ou finalisés.
+        </p>
       </div>
 
       {loading ? (
-        <p className="text-center">Chargement des projets...</p>
+        <p className="text-center text-slate-500">Chargement des projets...</p>
       ) : error ? (
         <p className="text-center text-red-500">Erreur : {error}</p>
       ) : projects.length === 0 ? (
-        <p className="text-center text-slate-500">Aucun projet trouvé</p>
+        <p className="text-center text-slate-500">Aucun projet trouvé.</p>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
             <Card
               key={project._id}
-              className="hover:shadow-md transition-shadow"
+              className="hover:shadow-xl hover:scale-[1.02] transition-transform duration-300 rounded-2xl"
             >
               <CardHeader>
-                <div className="flex items-start justify-between">
+                <div className="flex justify-between items-start">
                   <div>
-                    <CardTitle>{project.title}</CardTitle>
-                    <CardDescription>{project.description}</CardDescription>
+                    <CardTitle className="text-xl font-semibold">
+                      {project.title}
+                    </CardTitle>
+                    <CardDescription className="mt-1 text-sm text-muted-foreground">
+                      {project.description}
+                    </CardDescription>
                   </div>
-                  <div className="flex flex-col items-end space-y-2">
+                  <div className="flex flex-col items-end gap-2">
                     <Badge className={getDifficultyColor(project.difficulty)}>
                       {project.difficulty}
                     </Badge>
@@ -198,7 +163,7 @@ export default function ProjectsPage() {
                         size="icon"
                         variant="ghost"
                         onClick={() => handleDelete(project._id)}
-                        aria-label="Supprimer le projet"
+                        aria-label="Supprimer"
                       >
                         <Trash2 className="text-red-600 w-4 h-4" />
                       </Button>
@@ -207,16 +172,16 @@ export default function ProjectsPage() {
                 </div>
               </CardHeader>
 
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-4 text-sm text-slate-600">
-                  <span>⏱️ {project.duration}</span>
+              <CardContent className="space-y-4">
+                <div className="text-sm text-gray-500 flex gap-4">
+                  <span>⏱ {project.duration}</span>
                   <span>📋 {project.objectives?.length ?? 0} objectifs</span>
-                  <span>📌 Statut : {project.status}</span>
+                  <span>📌 {project.status}</span>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  {project.technologies.map((tech, index) => (
-                    <Badge key={index} variant="outline">
+                  {project.technologies.map((tech, i) => (
+                    <Badge key={i} variant="outline">
                       {tech}
                     </Badge>
                   ))}
@@ -230,14 +195,15 @@ export default function ProjectsPage() {
                   <>
                     {project.takenBy === user?._id ? (
                       <Button variant="secondary" className="w-full" disabled>
-                        ✅ Projet déjà pris par vous
+                        ✅ Projet déjà pris
                       </Button>
                     ) : project.takenBy ? (
                       (() => {
                         const takenAt = new Date(project.takenAt || "");
                         const now = new Date();
-                        const diffInMs = now.getTime() - takenAt.getTime();
-                        const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
+                        const diffInDays =
+                          (now.getTime() - takenAt.getTime()) /
+                          (1000 * 60 * 60 * 24);
                         const remaining = Math.ceil(7 - diffInDays);
                         return (
                           <Button
@@ -245,10 +211,8 @@ export default function ProjectsPage() {
                             className="w-full"
                             disabled
                           >
-                            ❌ Projet pris par un autre –{" "}
-                            {remaining > 0
-                              ? `disponible dans ${remaining} j`
-                              : "bientôt dispo"}
+                            ❌ Déjà pris – dispo dans{" "}
+                            {remaining > 0 ? `${remaining} j` : "bientôt"}
                           </Button>
                         );
                       })()
@@ -269,7 +233,7 @@ export default function ProjectsPage() {
                     <Badge className="w-full justify-center bg-green-100 text-green-800 text-sm py-2">
                       ✅ Projet terminé
                     </Badge>
-                  )} 
+                  )}
               </CardContent>
             </Card>
           ))}
@@ -278,4 +242,5 @@ export default function ProjectsPage() {
 
       {message && <p className="text-red-600 text-center mt-4">{message}</p>}
     </div>
-  )};
+  );
+}

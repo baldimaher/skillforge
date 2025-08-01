@@ -18,6 +18,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
   return (
     <html lang="fr">
+      <head>
+      <link rel="icon" href="/skill.png" type="image/png" sizes="80x80" />    
+      <title>Skill Forge</title>
+      </head>
       <body className={inter.className}>
         {isPublicPage ? (
           <main>{children}</main>
