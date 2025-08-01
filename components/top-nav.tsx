@@ -30,23 +30,29 @@ export function TopNav() {
     }[]
   >([]);
   const [notifCount, setNotifCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) setUser(JSON.parse(storedUser));
 
     fetch("/api/Formation")
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`Erreur API: ${res.status}`);
+        return res.json();
+      })
       .then((data) => {
         if (Array.isArray(data)) {
           setFormations(data);
           const viewed = JSON.parse(localStorage.getItem("formationsViewed") || "[]");
           const nonViewedCount = data.filter((f) => !viewed.includes(f._id)).length;
           setNotifCount(nonViewedCount);
+        } else {
+          throw new Error("Format de données invalide");
         }
       })
       .catch((err) => {
-        console.error("Erreur fetch formation:", err);
+        console.error("Erreur fetch formation:", err.message);
       });
   }, []);
 
@@ -67,6 +73,23 @@ export function TopNav() {
     window.location.href = "/";
   };
 
+  const handleSearch = () => {
+    const result = formations.find((f) =>
+      f.title.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    if (result) {
+      router.push(`/Formation/${result._id}`);
+    } else {
+      alert("Aucune formation trouvée.");
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
+  };
+
   const lastFormation = formations.length > 0 ? formations[0] : null;
 
   return (
@@ -76,6 +99,9 @@ export function TopNav() {
         <div className="relative hidden md:block">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder="Search courses, projects..."
             className="w-64 pl-10 bg-slate-50 border-slate-200"
           />

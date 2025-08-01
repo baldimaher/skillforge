@@ -1,50 +1,49 @@
 import { NextRequest, NextResponse } from "next/server";
-import dbConnect from "@/lib/mongo";
+
 import User from "@/models/User";
 import bcrypt from "bcryptjs";
+import dbConnect from "@/lib/mongo";
 
-export async function POST(req: NextRequest) {
-  try {
-    await dbConnect();
+export async function POST(request: Request) {
+  await dbConnect();
 
-    const { email, password } = await req.json();
+  const { email, password } = await request.json();
 
-    if (!email || !password) {
-      return NextResponse.json({ error: "Champs manquants" }, { status: 400 });
-    }
+  console.log("Email reçu :", email);
+  console.log("Mot de passe reçu :", password);
 
-    const user = await User.findOne({ email });
-    if (!user) {
-      return NextResponse.json({ error: "Utilisateur non trouvé" }, { status: 401 });
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-
-    if (!isMatch) {
-      return NextResponse.json({ error: "Mot de passe incorrect" }, { status: 401 });
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: "✅ Connexion réussie",
-      user: {
-        _id: user._id.toString(),
-        email: user.email,
-        lastName: user.lastName,
-        firstName: user.firstName,
-        role: user.role,
-        projectsTaken: user.projectsTaken,
-        quizzes: user.quizzes,
-        certificates: user.certificates,
-      },
-    });
-
-  } catch (error) {
-    console.error("❌ Erreur POST login:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+  if (!email || !password) {
+    return NextResponse.json({ error: "Champs manquants" }, { status: 400 });
   }
-}
 
+  const user = await User.findOne({ email }).select("+password");
+  if (!user) {
+    return NextResponse.json({ success: false, message: "Utilisateur non trouvé" }, { status: 401 });
+  }
+
+  const isMatch = await user.comparePassword(password);
+  console.log("Mot de passe correct ?", isMatch);
+
+  if (!isMatch) {
+    return NextResponse.json({ success: false, message: "Mot de passe incorrect" }, { status: 401 });
+  }
+
+  // 🔒 Vérification si l'utilisateur est approuvé, uniquement si role === "user"
+  if (user.role === "user" && !user.isApproved) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Votre compte est en attente d'approbation par un administrateur.",
+      },
+      { status: 403 }
+    );
+  }
+
+  const userSafe = user.toObject();
+  delete userSafe.password;
+
+  return NextResponse.json({ success: true, user: userSafe });
+}
 
 export async function GET() {
   return NextResponse.json({ error: "Méthode GET non autorisée" }, { status: 405 });

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import dbConnect from "@/lib/mongo";
 import Project from "@/models/Project";
 import Task from "@/models/task";
+import dbConnect from "@/lib/mongo";
 
 interface Params {
   params: { id: string };

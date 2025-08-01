@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import User from "../../../models/User";
-import bcrypt from "bcryptjs";
 import dbConnect from "../../../lib/mongo";
 
 export async function POST(req: NextRequest) {
@@ -10,23 +9,31 @@ export async function POST(req: NextRequest) {
 
     const { email, password, firstName, lastName, phone, birthDate, role } = await req.json();
 
+    // Validation des champs obligatoires
     if (!email || !password || !firstName || !lastName) {
-      return NextResponse.json({ error: "Champs requis manquants" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Champs requis manquants" },
+        { status: 400 }
+      );
     }
 
+    // Vérifie si l'utilisateur existe déjà
     const userExist = await User.findOne({ email });
     if (userExist) {
-      return NextResponse.json({ error: "Email déjà utilisé" }, { status: 409 });
+      return NextResponse.json(
+        { error: "Email déjà utilisé" },
+        { status: 409 }
+      );
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-
+    // Valide le rôle (user ou admin)
     const validRoles = ["user", "admin"];
     const userRole = validRoles.includes(role) ? role : "user";
 
-    const newUser = await User.create({
+    // Crée l'utilisateur, le hashage est fait automatiquement par le middleware mongoose
+    const newUser = new User({
       email,
-      password: hashedPassword,
+      password, // clair ici, sera hashé automatiquement par le pre-save
       firstName,
       lastName,
       phone,
@@ -34,6 +41,9 @@ export async function POST(req: NextRequest) {
       role: userRole,
     });
 
+    await newUser.save();
+
+    // Réponse sans le mot de passe
     return NextResponse.json({
       message: "✅ Utilisateur créé avec succès",
       user: {
@@ -45,6 +55,9 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("Erreur signup :", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Erreur serveur" },
+      { status: 500 }
+    );
   }
 }

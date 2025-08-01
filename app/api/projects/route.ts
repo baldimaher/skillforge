@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import Project from "../../../models/Project";
-import connectDB from "../../../lib/mongo";
 import { Types } from "mongoose";
+import connectDB from "../../../lib/mongo";
 
 export async function GET() {
   await connectDB();
@@ -64,6 +64,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Erreur serveur" }, { status: 500 });
   }
 }
-
-
-

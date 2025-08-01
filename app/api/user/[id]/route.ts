@@ -1,16 +1,19 @@
-import { NextRequest, NextResponse } from "next/server";
-import dbConnect from "@/lib/mongo";
-import User from "@/models/User";
+// app/api/user/[id]/route.ts
+
 import "@/models/Certificate";
+
+import { NextRequest } from "next/server";
+import User from "@/models/User";
+import dbConnect from "@/lib/mongo";
 
 export async function GET(
   req: NextRequest,
   context: { params: { id: string } }
 ) {
-  try {
-    await dbConnect();
+  await dbConnect();
 
-    const { id } = context.params; // ✅ Déstructuration ici
+  try {
+    const { id } = context.params;
 
     const user = await User.findById(id)
       .populate("certificates")
@@ -24,12 +27,15 @@ export async function GET(
       });
 
     if (!user) {
-      return NextResponse.json({ error: "Utilisateur non trouvé." }, { status: 404 });
+      return new Response("Utilisateur non trouvé", { status: 404 });
     }
 
-    return NextResponse.json(user);
-  } catch (err) {
-    console.error("Erreur GET /api/user/[id]:", err);
-    return NextResponse.json({ error: "Erreur serveur." }, { status: 500 });
+    return new Response(JSON.stringify(user), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    console.error("Erreur GET /api/user/[id]", error);
+    return new Response("Erreur serveur", { status: 500 });
   }
 }

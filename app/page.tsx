@@ -1,14 +1,31 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 
 export default function LoginPage() {
   const router = useRouter();
+
+  // Initialiser email, password, rememberMe en lisant dans localStorage au chargement
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedEmail = localStorage.getItem("savedEmail");
+      const savedPassword = localStorage.getItem("savedPassword");
+      if (savedEmail && savedPassword) {
+        setEmail(savedEmail);
+        setPassword(savedPassword);
+        setRememberMe(true);
+      }
+    }
+  }, []);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -26,17 +43,30 @@ export default function LoginPage() {
 
       if (res.ok && data.success) {
         const fullUser = data.user;
-        localStorage.setItem("user", JSON.stringify(fullUser));
-        localStorage.setItem("userId", fullUser._id);
-        localStorage.setItem("email", fullUser.email);
-        localStorage.setItem("lastName", fullUser.lastName);
-        localStorage.setItem("userName", fullUser.firstName);
-        localStorage.setItem("userRole", fullUser.role);
-        localStorage.setItem("ProjecTaken", JSON.stringify(fullUser.projectsTaken || []));
-        localStorage.setItem("quizzes", JSON.stringify(fullUser.quizzes || []));
-        localStorage.setItem("certificates", JSON.stringify(fullUser.certificates || []));
 
-        // Redirection conditionnelle basée sur le rôle
+        // Stocker les infos utilisateur (comme avant)
+      const storage = localStorage;
+
+        storage.setItem("user", JSON.stringify(fullUser));
+        storage.setItem("userId", fullUser._id);
+        storage.setItem("email", fullUser.email);
+        storage.setItem("lastName", fullUser.lastName);
+        storage.setItem("userName", fullUser.firstName);
+        storage.setItem("userRole", fullUser.role);
+        storage.setItem("ProjecTaken", JSON.stringify(fullUser.projectsTaken || []));
+        storage.setItem("quizzes", JSON.stringify(fullUser.quizzes || []));
+        storage.setItem("certificates", JSON.stringify(fullUser.certificates || []));
+
+        // Sauvegarder ou supprimer email et password dans localStorage selon rememberMe
+        if (rememberMe) {
+          localStorage.setItem("savedEmail", email);
+          localStorage.setItem("savedPassword", password);
+        } else {
+          localStorage.removeItem("savedEmail");
+          localStorage.removeItem("savedPassword");
+        }
+
+        // Redirection selon rôle
         const userRole = fullUser.role;
         if (userRole === "admin") {
           router.push("/admin/progress");
@@ -70,33 +100,46 @@ export default function LoginPage() {
 
           {error && <p className="text-red-500 text-center">{error}</p>}
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            <input
-              type="email"
-              placeholder="Nom d'utilisateur ou email"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            <input
-              type="password"
-              placeholder="Mot de passe"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-            <div className="flex items-center justify-between text-sm text-gray-600">
-              <label className="flex items-center gap-2">
-                <input type="checkbox" className="accent-indigo-500" />
-                Se souvenir de moi
-                </label>
-                <a href="/forgot-password" className="hover:underline text-indigo-600">
-  Mot de passe oublié ?
-</a>
+          <form onSubmit={handleLogin} className="space-y-4" noValidate>
+            <div>
+              <label htmlFor="email" className="block mb-2 text-gray-700 font-medium">
+                Nom d'utilisateur ou email
+              </label>
+              <input
+                id="email"
+                type="email"
+                placeholder="Entrez votre email"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={loading}
+              />
+            </div>
 
-         </div>
+            <div>
+              <label htmlFor="password" className="block mb-2 text-gray-700 font-medium">
+                Mot de passe
+              </label>
+              <input
+                id="password"
+                type="password"
+                placeholder="Entrez votre mot de passe"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={loading}
+              />
+            </div>
+
+            <div className="flex items-center justify-between text-sm text-gray-600">
+
+              <Link href="/forgot-password" className="hover:underline text-indigo-600">
+                Mot de passe oublié ?
+              </Link>
+            </div>
+
             <button
               type="submit"
               disabled={loading}
@@ -112,9 +155,9 @@ export default function LoginPage() {
 
           <p className="text-center text-sm text-gray-600">
             Vous n'avez pas de compte ?{" "}
-            <a href="/signup" className="text-indigo-600 hover:underline font-medium">
+            <Link href="/signup" className="text-indigo-600 hover:underline font-medium">
               Cliquez ici
-            </a>
+            </Link>
           </p>
         </div>
       </div>

@@ -1,6 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+
+import { Button } from "@/components/ui/button";
+import Head from "next/head";
+import { Input } from "@/components/ui/input";
+import { toast } from "@/components/ui/use-toast";
 
 export default function AddProjectPage() {
   const [title, setTitle] = useState("");
@@ -14,13 +19,32 @@ export default function AddProjectPage() {
   const [duration, setDuration] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const userStr =
-    typeof window !== "undefined" ? localStorage.getItem("user") : null;
+  const userStr = typeof window !== "undefined" ? localStorage.getItem("user") : null;
   const user = userStr ? JSON.parse(userStr) : null;
+
+  useEffect(() => {
+    if (!user) {
+      setErrorMsg("Vous devez être connecté pour ajouter un projet.");
+      toast({
+        title: "Erreur",
+        description: "Veuillez vous connecter pour continuer.",
+        variant: "destructive",
+      });
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) {
+      setErrorMsg("Vous devez être connecté pour ajouter un projet.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMsg("");
+    setSuccessMsg("");
 
     const techArray = technologies
       .split(",")
@@ -46,7 +70,7 @@ export default function AddProjectPage() {
           duration,
           githubUrl: link.trim(),
           demoUrl: demoUrl.trim(),
-          userId: user?._id,
+          userId: user._id,
         }),
       });
 
@@ -54,6 +78,10 @@ export default function AddProjectPage() {
 
       if (res.ok) {
         setSuccessMsg("Projet ajouté avec succès !");
+        toast({
+          title: "Succès",
+          description: "Votre projet a été ajouté avec succès.",
+        });
         setTitle("");
         setLink("");
         setDemoUrl("");
@@ -63,106 +91,140 @@ export default function AddProjectPage() {
         setObjectives("");
         setStatus("à venir");
         setDifficulty("Beginner");
-        setErrorMsg("");
       } else {
-        setErrorMsg(data.message || "Erreur lors de l'ajout.");
+        setErrorMsg(data.message || "Erreur lors de l'ajout du projet.");
+        toast({
+          title: "Erreur",
+          description: data.message || "Erreur lors de l'ajout du projet.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Erreur:", error);
       setErrorMsg("Erreur réseau ou serveur.");
+      toast({
+        title: "Erreur",
+        description: "Une erreur réseau est survenue. Veuillez réessayer.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="max-w-xl mx-auto mt-10 p-4 bg-white rounded shadow">
-      <h1 className="text-2xl font-bold mb-4">Ajouter un Projet</h1>
-      {errorMsg && (
-        <div className="bg-red-100 text-red-700 px-3 py-2 rounded mb-2">
-          {errorMsg}
-        </div>
-      )}
-      {successMsg && (
-        <div className="bg-green-100 text-green-700 px-3 py-2 rounded mb-2">
-          {successMsg}
-        </div>
-      )}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <input
-          type="text"
-          placeholder="Titre du projet"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="w-full border px-3 py-2 rounded"
-          required
+    <>
+      <Head>
+        <title>Ajouter un Projet - InnovaSkilles</title>
+        <meta
+          name="description"
+          content="Ajoutez un nouveau projet à votre portfolio sur InnovaSkilles."
         />
-        <input
-          type="url"
-          placeholder="Lien GitHub"
-          value={link}
-          onChange={(e) => setLink(e.target.value)}
-          className="w-full border px-3 py-2 rounded"
-        />
-        <input
-          type="url"
-          placeholder="Lien de démo"
-          value={demoUrl}
-          onChange={(e) => setDemoUrl(e.target.value)}
-          className="w-full border px-3 py-2 rounded"
-        />
-        <textarea
-          placeholder="Description du projet"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          className="w-full border px-3 py-2 rounded"
-          required
-        />
-        <textarea
-          placeholder="Objectifs (séparés par ;) ex: Apprendre React;Maîtriser les hooks"
-          value={objectives}
-          onChange={(e) => setObjectives(e.target.value)}
-          className="w-full border px-3 py-2 rounded"
-        />
-        <input
-          type="text"
-          placeholder="Technologies (ex: React, Node.js)"
-          value={technologies}
-          onChange={(e) => setTechnologies(e.target.value)}
-          className="w-full border px-3 py-2 rounded"
-        />
-        <select
-          value={difficulty}
-          onChange={(e) => setDifficulty(e.target.value)}
-          className="w-full border px-3 py-2 rounded"
-          required
-        >
-          <option value="Beginner">Débutant</option>
-          <option value="Intermediate">Intermédiaire</option>
-          <option value="Advanced">Avancé</option>
-        </select>
-        <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          className="w-full border px-3 py-2 rounded"
-        >
-          <option value="à venir">À venir</option>
-          <option value="en cours">En cours</option>
-          <option value="terminé">Terminé</option>
-        </select>
-        <input
-          type="text"
-          placeholder="Durée estimée (ex: 2 semaines)"
-          value={duration}
-          onChange={(e) => setDuration(e.target.value)}
-          className="w-full border px-3 py-2 rounded"
-          required
-        />
-        <button
-          type="submit"
-          className="bg-green-600 text-white px-4 py-2 rounded"
-        >
-          Ajouter
-        </button>
-      </form>
-    </div>
+      </Head>
+      <div className="max-w-xl mx-auto mt-10 p-4 sm:p-6 bg-gray-50 dark:bg-gray-900 rounded-lg shadow-lg">
+        <h1 className="text-2xl font-bold mb-6 text-indigo-800 dark:text-indigo-300">
+          Ajouter un Projet
+        </h1>
+        {errorMsg && (
+          <div className="bg-rose-100 dark:bg-rose-900 text-rose-700 dark:text-rose-200 px-4 py-2 rounded mb-4">
+            {errorMsg}
+          </div>
+        )}
+        {successMsg && (
+          <div className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 px-4 py-2 rounded mb-4">
+            {successMsg}
+          </div>
+        )}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            type="text"
+            placeholder="Titre du projet"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="border-indigo-300 dark:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-400"
+            required
+            aria-label="Titre du projet"
+          />
+          <Input
+            type="url"
+            placeholder="Lien GitHub"
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            className="border-indigo-300 dark:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-400"
+            aria-label="Lien GitHub"
+          />
+          <Input
+            type="url"
+            placeholder="Lien de démo"
+            value={demoUrl}
+            onChange={(e) => setDemoUrl(e.target.value)}
+            className="border-indigo-300 dark:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-400"
+            aria-label="Lien de démo"
+          />
+          <textarea
+            placeholder="Description du projet"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="w-full border border-indigo-300 dark:border-indigo-600 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+            required
+            rows={4}
+            aria-label="Description du projet"
+          />
+          <textarea
+            placeholder="Objectifs (séparés par ;) ex: Apprendre React;Maîtriser les hooks"
+            value={objectives}
+            onChange={(e) => setObjectives(e.target.value)}
+            className="w-full border border-indigo-300 dark:border-indigo-600 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+            rows={3}
+            aria-label="Objectifs du projet"
+          />
+          <Input
+            type="text"
+            placeholder="Technologies (ex: React, Node.js)"
+            value={technologies}
+            onChange={(e) => setTechnologies(e.target.value)}
+            className="border-indigo-300 dark:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-400"
+            aria-label="Technologies utilisées"
+          />
+          <select
+            value={difficulty}
+            onChange={(e) => setDifficulty(e.target.value)}
+            className="w-full border border-indigo-300 dark:border-indigo-600 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+            required
+            aria-label="Niveau de difficulté"
+          >
+            <option value="Beginner">Débutant</option>
+            <option value="Intermediate">Intermédiaire</option>
+            <option value="Advanced">Avancé</option>
+          </select>
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="w-full border border-indigo-300 dark:border-indigo-600 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+            aria-label="Statut du projet"
+          >
+            <option value="à venir">À venir</option>
+            <option value="en cours">En cours</option>
+            <option value="terminé">Terminé</option>
+          </select>
+          <Input
+            type="text"
+            placeholder="Durée estimée (ex: 2 semaines)"
+            value={duration}
+            onChange={(e) => setDuration(e.target.value)}
+            className="border-indigo-300 dark:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-400"
+            required
+            aria-label="Durée estimée"
+          />
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white w-full"
+          >
+            {isSubmitting ? "Ajout en cours..." : "Ajouter"}
+          </Button>
+        </form>
+      </div>
+    </>
   );
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import dbConnect from "@/lib/mongo";
-import User from "@/models/User";
 import Project from "@/models/Project";
+import User from "@/models/User";
+import dbConnect from "@/lib/mongo";
 
 export async function GET() {
   try {

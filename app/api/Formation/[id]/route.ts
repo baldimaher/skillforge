@@ -1,14 +1,15 @@
-import Formation from "../../../../models/Formation";
+// app/api/Formation/route.ts
 import { NextResponse } from "next/server";
 import dbConnect from "../../../../lib/mongo";
+import Formation from "../../../../models/Formation";
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET() {
   try {
     await dbConnect();
-    const formation = await Formation.findById(params.id).lean();
-    if (!formation) return NextResponse.json({ error: "Formation non trouvée" }, { status: 404 });
-    return NextResponse.json(formation);
+    const formations = await Formation.find().sort({ createdAt: -1 }).lean();
+    return NextResponse.json(formations);
   } catch (error) {
+    console.error("Erreur GET /api/Formation:", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

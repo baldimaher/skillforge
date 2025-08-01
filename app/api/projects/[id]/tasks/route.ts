@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import Task from "@/models/task";
 import Project from "@/models/Project";
+import Task from "@/models/task";
 import connectDB from "@/lib/mongo";
 
 interface Params {

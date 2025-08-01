@@ -3,6 +3,7 @@
 import './globals.css';
 
 import { AppSidebar } from '@/components/app-sidebar';
+import ChatBotComponent from '@/components/ChatBotComponent'; // 👈 Import du chatbot
 import { Inter } from 'next/font/google';
 import { ReactNode } from 'react';
 import { SidebarProvider } from '@/components/ui/sidebar';
@@ -13,10 +14,14 @@ const inter = Inter({ subsets: ['latin'] });
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const isPublicPage = pathname === '/' || pathname === '/signup';
+  const isPublicPage = pathname === '/' || pathname === '/signup' || pathname == '/forgot-password'|| pathname == '/reset-password';
 
   return (
     <html lang="fr">
+      <head>
+      <link rel="icon" href="/skill.png" type="image/png" sizes="80x80" />    
+      <title>Skill Forge</title>
+      </head>
       <body className={inter.className}>
         {isPublicPage ? (
           <main>{children}</main>
@@ -29,6 +34,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 <main className="flex-1 p-6 bg-slate-50/50">{children}</main>
               </div>
             </div>
+            <ChatBotComponent /> {/* 👈 Ajout du chatbot ici */}
           </SidebarProvider>
         )}
       </body>

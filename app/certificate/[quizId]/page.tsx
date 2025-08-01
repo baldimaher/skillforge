@@ -1,183 +1,253 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
+import { useEffect } from "react";
 
-import html2pdf from "html2pdf.js";
-import { useParams } from "next/navigation";
-
-interface Certificate {
+interface CertificateProps {
+  user: { firstName: string; lastName: string };
   quizTitle: string;
   score: number;
-  date: string;
-  pdfUrl?: string;
 }
-
-interface User {
-  firstName: string;
-  lastName: string;
-  email: string;
-  _id: string;
-  role: string;
-}
-
-export default function CertificatePage() {
-  const { quizId } = useParams() as { quizId: string };
-  const [cert, setCert] = useState<Certificate | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const certificateRef = useRef<HTMLDivElement>(null);
+export default function Certificate({ user, quizTitle, score }: CertificateProps) {
+  const date = new Date().toLocaleDateString("fr-FR");
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    console.log("Certificate rendered with:", { user, quizTitle, score });
+  }, [user, quizTitle, score]);
+
+  const downloadCertificate = () => {
+    const certificateElement = document.querySelector(".certificate") as HTMLElement;
+    if (!certificateElement) {
+      alert("Erreur : Impossible de trouver le certificat.");
+      return;
     }
 
-    const fetchCertificate = async () => {
-      try {
-        const res = await fetch(`/api/certificates/${quizId}`, { cache: "no-store" });
-        if (res.ok) {
-          const data = await res.json();
-          setCert(data);
-        } else {
-          setCert(null);
-        }
-      } catch (error) {
-        console.error("Erreur lors du chargement du certificat :", error);
-        setCert(null);
-      } finally {
-        setLoading(false);
-      }
-    };
+    html2canvas(certificateElement, { scale: 2 })
+      .then((canvas) => {
+        const imgData = canvas.toDataURL("image/png");
+        const doc = new jsPDF({
+          orientation: "portrait",
+          unit: "mm",
+          format: "a4",
+        });
 
-    if (quizId) {
-      fetchCertificate();
-    }
-  }, [quizId]);
+        const imgWidth = 210;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        doc.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+        doc.save(`${quizTitle}_certificate.pdf`);
+      })
+      .catch((err) => {
+        console.error("Erreur lors de la génération du PDF:", err);
+        alert("Erreur lors de la génération du PDF.");
+      });
+  };
 
- // Supprime cet import statique en haut du fichier
-// import html2pdf from "html2pdf.js";
-
-const handleDownloadPDF = async () => {
-  if (certificateRef.current && cert && user) {
-    const html2pdf = (await import("html2pdf.js")).default; // import dynamique ici
-
-    const options = {
-      margin: 0.5,
-      filename: `Certificat-SkillForge-${user.firstName}-${cert.quizTitle}.pdf`,
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, logging: false },
-      jsPDF: { unit: "in", format: "letter", orientation: "portrait" },
-    };
-
-    html2pdf()
-      .set(options)
-      .from(certificateRef.current)
-      .save()
-      .catch((err: unknown) => console.error("Erreur lors de la génération du PDF :", err));
-  }
-};
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="text-center text-2xl font-semibold text-indigo-700">Chargement du certificat...</div>
-      </div>
-    );
-  }
-
-  if (!cert || !user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="text-center text-2xl font-semibold text-red-600">Certificat ou utilisateur non trouvé.</div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 px-4 py-12">
-      <div
-        ref={certificateRef}
-        className="relative p-12 bg-white rounded-2xl shadow-2xl max-w-4xl w-full text-center border-2 border-indigo-200"
-        style={{ fontFamily: "'Georgia', serif" }}
-      >
-        {/* Decorative Double Border */}
-        <div className="absolute inset-0 border-4 border-double border-indigo-300 rounded-2xl pointer-events-none"></div>
-
-        {/* Header with Logo and CSS-based Stamp */}
-        <div className="flex justify-between items-center mb-10">
-          <h1 className="text-5xl font-bold text-indigo-900 tracking-tight select-none">SkillForge</h1>
-          <div className="flex flex-col items-center justify-center w-20 h-20 rounded-full border-2 border-indigo-600 bg-indigo-50 text-indigo-700 text-xs font-semibold select-none">
-            <span>OFFICIAL</span>
-            <span>SKILLFORGE</span>
-            <span>SEAL</span>
+  const certificateHtml = `
+    <div class="certificate">
+      <div class="certificate-content">
+        <h1>🏆 Certificat de Réussite 🏆</h1>
+        <div class="decorative-border">
+          <p style="font-size: 1.2em; color: #6b7280; margin: 0;">Ceci certifie que</p>
+          <div class="recipient-name">${user.firstName} ${user.lastName}</div>
+          <p style="font-size: 1.2em; color: #6b7280; margin: 0;">a réussi avec succès le quiz</p>
+          <div class="quiz-title">"${quizTitle}"</div>
+          <div class="score">Score obtenu: ${score}%</div>
+          <div class="date">Délivré le ${date}</div>
+          <div class="buttons">
+            <button class="print-button" onclick="window.print()">🖨️ Imprimer le certificat</button>
+            <button onclick="downloadCertificate()">📄 Télécharger en PDF</button>
           </div>
         </div>
-
-        {/* Main Content */}
-        <h2 className="text-4xl font-semibold mb-10 text-gray-800 tracking-wide">Certificat de Réussite</h2>
-
-        <p className="text-lg text-gray-600 mb-4">Ceci atteste que</p>
-        <p className="text-3xl font-bold text-indigo-800 mb-6 select-text">
-          {user.firstName} {user.lastName}
-        </p>
-        <p className="text-lg text-gray-600 mb-4">a complété avec succès le quiz</p>
-        <p className="text-2xl font-medium text-indigo-700 mb-6 tracking-wide select-text">{cert.quizTitle}</p>
-        <p className="text-lg text-gray-600 mb-8">
-          avec un score de <span className="font-semibold text-indigo-700">{cert.score}%</span>
-        </p>
-        <p className="text-md text-gray-500 italic select-text">
-          Délivré le : {new Date(cert.date).toLocaleDateString("fr-FR", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })}
-        </p>
-
-        {cert.pdfUrl && (
-          <a
-            href={cert.pdfUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-indigo-600 hover:text-indigo-800 underline mt-6 block font-medium text-sm select-text"
-          >
-            Voir le certificat PDF original
-          </a>
-        )}
-
-        {/* Footer with Signature and CSS-based Stamp */}
-        <div className="mt-12 flex justify-between items-center px-10">
-          <div className="text-left">
-            <p className="border-t-2 border-gray-400 w-48 pt-2 text-gray-700 font-semibold select-text">
-              Signature
-            </p>
-            <p className="text-gray-500 italic text-sm select-text">Directeur Général, SkillForge</p>
-          </div>
-          <div className="flex flex-col items-center justify-center w-16 h-16 rounded-full border-2 border-indigo-600 bg-indigo-50 text-indigo-700 text-xs font-semibold select-none">
-            <span>OFFICIAL</span>
-            <span>SKILLFORGE</span>
-            <span>SEAL</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Buttons */}
-      <div className="mt-8 flex gap-6">
-        <button
-          onClick={() => window.print()}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-lg shadow-md transition duration-300 ease-in-out text-lg font-medium"
-          aria-label="Imprimer le certificat"
-        >
-          Imprimer
-        </button>
-        <button
-          onClick={handleDownloadPDF}
-          className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg shadow-md transition duration-300 ease-in-out text-lg font-medium"
-          aria-label="Télécharger le certificat en PDF"
-        >
-          Télécharger PDF
-        </button>
       </div>
     </div>
+  `;
+
+  return (
+    <div
+      dangerouslySetInnerHTML={{ __html: certificateHtml }}
+      className="p-8 bg-white rounded-lg shadow-lg max-w-md mx-auto text-center mt-8 border border-indigo-200"
+    />
   );
+}
+
+export function openCertificateInNewTab(
+  user: { firstName: string; lastName: string },
+  quizTitle: string,
+  score: number
+) {
+  const date = new Date().toLocaleDateString("fr-FR");
+
+  const certificateHtml = `
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Certificat de Réussite - ${quizTitle}</title>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          margin: 0;
+          padding: 40px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .certificate {
+          background: white;
+          padding: 60px;
+          border-radius: 20px;
+          box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+          text-align: center;
+          max-width: 600px;
+          width: 100%;
+          border: 8px solid #4f46e5;
+          position: relative;
+          overflow: hidden;
+        }
+        .certificate::before {
+          content: '';
+          position: absolute;
+          top: -50%;
+          left: -50%;
+          width: 200%;
+          height: 200%;
+          background: linear-gradient(45deg, transparent, rgba(79, 70, 229, 0.1), transparent);
+          transform: rotate(45deg);
+          animation: shine 3s infinite;
+        }
+        @keyframes shine {
+          0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+          100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+        .certificate-content {
+          position: relative;
+          z-index: 2;
+        }
+        h1 {
+          color: #4f46e5;
+          font-size: 2.5em;
+          margin-bottom: 30px;
+          text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        .recipient-name {
+          font-size: 2em;
+          color: #4f46e5;
+          font-weight: bold;
+          margin: 20px 0;
+          text-decoration: underline;
+        }
+        .quiz-title {
+          font-size: 1.5em;
+          color: #6366f1;
+          font-weight: 600;
+          margin: 20px 0;
+          font-style: italic;
+        }
+        .score {
+          font-size: 1.8em;
+          color: #059669;
+          font-weight: bold;
+          margin: 20px 0;
+        }
+        .date {
+          color: #6b7280;
+          font-size: 1.1em;
+          margin: 20px 0;
+        }
+        .decorative-border {
+          border: 3px solid #4f46e5;
+          border-radius: 10px;
+          padding: 20px;
+          margin: 20px 0;
+        }
+        .buttons {
+          margin-top: 20px;
+          display: flex;
+          gap: 15px;
+          justify-content: center;
+          flex-wrap: wrap;
+        }
+        button {
+          background: #4f46e5;
+          color: white;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 6px;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
+        button:hover {
+          background: #4338ca;
+          transform: translateY(-2px);
+        }
+        .print-button {
+          background: #059669;
+        }
+        .print-button:hover {
+          background: #047857;
+        }
+        @media print {
+          body { background: white; padding: 0; }
+          .certificate { box-shadow: none; border: 2px solid #4f46e5; }
+          .buttons { display: none; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="certificate">
+        <div class="certificate-content">
+          <h1>🏆 Certificat de Réussite 🏆</h1>
+          <div class="decorative-border">
+            <p style="font-size: 1.2em; color: #6b7280; margin: 0;">Ceci certifie que</p>
+            <div class="recipient-name">${user.firstName} ${user.lastName}</div>
+            <p style="font-size: 1.2em; color: #6b7280; margin: 0;">a réussi avec succès le quiz</p>
+            <div class="quiz-title">"${quizTitle}"</div>
+            <div class="score">Score obtenu: ${score}%</div>
+            <div class="date">Délivré le ${date}</div>
+            <div class="buttons">
+              <button class="print-button" onclick="window.print()">🖨️ Imprimer le certificat</button>
+              <button onclick="downloadCertificate()">📄 Télécharger en PDF</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <script>
+        function downloadCertificate() {
+          const certificate = document.querySelector('.certificate');
+          html2canvas(certificate, { scale: 2 }).then(canvas => {
+            const imgData = canvas.toDataURL('image/png');
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({
+              orientation: 'portrait',
+              unit: 'mm',
+              format: 'a4'
+            });
+            const imgWidth = 210;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+            doc.save('${quizTitle}_certificate.pdf');
+          }).catch(err => {
+            console.error('Erreur lors de la génération du PDF:', err);
+            alert('Erreur lors de la génération du PDF.');
+          });
+        }
+      </script>
+    </body>
+    </html>
+  `;
+
+  const newWindow = window.open();
+  if (newWindow) {
+    newWindow.document.write(certificateHtml);
+    newWindow.document.close();
+  } else {
+    console.error("Failed to open new window");
+  }
 }

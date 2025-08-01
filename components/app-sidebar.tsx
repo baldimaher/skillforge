@@ -4,10 +4,13 @@ import {
   BarChart3,
   BookOpen,
   Code2,
+  FileText,
   GraduationCap,
   Home,
+  MessageCircle,
   PlusCircle,
   Trophy,
+  User
 } from "lucide-react";
 import {
   Sidebar,
@@ -27,17 +30,18 @@ import { usePathname } from "next/navigation";
 type RoleType = "user" | "admin";
 
 const baseMenuItems = [
-  { title: "Dashboard", url: "/dashboard", icon: Home },
-  { title: "Quizzes", url: "/quizzes", icon: BookOpen },
-  { title: "Projects", url: "/projects", icon: Code2 },
-  { title: "Formation", url: "/Formation", icon: GraduationCap },
-  { title: "Progress", url: "/progress", icon: BarChart3 },
+  { title: "Tableau de bord", url: "/dashboard", icon: Home },
+  { title: "Quiz", url: "/quizzes", icon: BookOpen },
+  { title: "Projets", url: "/projects", icon: Code2 },
+  { title: "Formation", url: "/formation", icon: GraduationCap },
+  { title: "Progression", url: "/progress", icon: BarChart3 },
 ];
 
 const adminMenuItems = [
-  { title: "Add Quiz", url: "/admin/addquiz", icon: PlusCircle },
-  { title: "Add Project", url: "/admin/addproject", icon: PlusCircle },
-  { title: "Add Formation", url: "/admin/addformation", icon: PlusCircle },
+  { title: "Gestion des utilisateurs", url: "/admin/users", icon: PlusCircle },
+  { title: "Ajouter une formation", url: "/admin/addformation", icon: PlusCircle },
+  { title: "Ajouter un quiz", url: "/admin/addquiz", icon: PlusCircle },
+  { title: "Ajouter un projet", url: "/admin/addproject", icon: PlusCircle },
 ];
 
 export function AppSidebar() {
@@ -54,25 +58,25 @@ export function AppSidebar() {
 
   // Menu commun pour tous les rôles, Feedback inclus une seule fois
   const menuItems = [
-    { title: "Dashboard", url: "/dashboard", icon: Home },
+    { title: "Tableau de bord", url: "/dashboard", icon: Home },
     {
-      title: "Progress",
+      title: "Progression",
       url: role === "admin" ? "/admin/progress" : "/progress",
       icon: BarChart3,
     },
-    { title: "Quizzes", url: "/quizzes", icon: BookOpen },
-    { title: "Projects", url: "/projects", icon: Code2 },
+    { title: "Quiz", url: "/quizzes", icon: BookOpen },
+    { title: "Projets", url: "/projects", icon: Code2 },
     { title: "Formation", url: "/Formation", icon: GraduationCap },
-    { title: "Feedback", url: "/feedback", icon: GraduationCap },
+    { title: "Retour d'expérience", url: "/feedback", icon: MessageCircle },
   ];
 
-  // Ajouts spécifiques pour admin (sans Feedback car déjà présent)
-  if (role === "admin") {
-    menuItems.push(
-      { title: "Add Quiz", url: "/admin/addquiz", icon: PlusCircle },
-      { title: "Add Project", url: "/admin/addproject", icon: PlusCircle },
-      { title: "Add Formation", url: "/admin/addformation", icon: PlusCircle }
-    );
+if (role === "admin") {
+  menuItems.push(
+    { title: "Gestion des utilisateurs", url: "/admin/users", icon: User },
+    { title: "Ajouter un quiz", url: "/admin/addquiz", icon: FileText },
+    { title: "Ajouter un projet", url: "/admin/addproject", icon: Code2 },
+    { title: "Ajouter une formation", url: "/admin/addformation", icon: GraduationCap }
+  );
   }
 
   return (

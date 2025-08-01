@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
+  Award,
   BookOpen,
   CheckCircle,
   Clock,
@@ -12,7 +13,6 @@ import {
   Target,
   TrendingUp,
   Trophy,
-  Award,
 } from "lucide-react";
 import {
   Card,
@@ -20,11 +20,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useCallback, useEffect, useState } from "react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
-import { useEffect, useState, useCallback } from "react";
 
 interface User {
   _id: string;

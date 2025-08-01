@@ -1,5 +1,5 @@
-import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import mongoose from "mongoose";
 
 const QuizResultSchema = new mongoose.Schema({
   quiz: { type: mongoose.Schema.Types.ObjectId, ref: "Quiz" },
@@ -8,35 +8,53 @@ const QuizResultSchema = new mongoose.Schema({
   title: String,
 });
 
-const userSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  phone: String,
-  birthDate: Date,
-  firstName: String,
-  lastName: String,
-  address: String,
-  cvUrl: String,
-  cvText: { type: String, default: "" },
-  skills: { type: [String], default: [] },
-  quizzes: [QuizResultSchema],
-  role: { type: String, enum: ["user", "admin"], default: "user" },
-  projectsTaken: [{ type: mongoose.Schema.Types.ObjectId, ref: "Project" }],
-  certificates: [{ type: mongoose.Schema.Types.ObjectId, ref: "Certificate" }],
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now },
-  resetToken: String,
-  resetTokenExpire: Date,
-});
+const userSchema = new mongoose.Schema(
+  {
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true, select: false },
+    phone: String,
+    birthDate: Date,
+    firstName: String,
+    lastName: String,
+    address: String,
+    cvUrl: String,
+    cvText: { type: String, default: "" },
+    skills: { type: [String], default: [] },
+    quizzes: [QuizResultSchema],
+    role: { type: String, enum: ["user", "admin"], default: "user" },
+    projectsTaken: [{ type: mongoose.Schema.Types.ObjectId, ref: "Project" }],
+    certificates: [{ type: mongoose.Schema.Types.ObjectId, ref: "Certificate" }],
+    resetToken: { type: String, select: false },
+    resetTokenExpire: { type: Date, select: false },
+    lastLogin: { type: Date, default: Date.now },
 
-// ✅ Hash password with bcrypt before saving
+    // ➕ nouveau champ
+    isApproved: { type: Boolean, default: false },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+
+// Middleware de hashage du mot de passe avant sauvegarde
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
+  if (!this.isModified("password")) {
+    console.log("Mot de passe non modifié, pas de hashage");
+    return next();
+  }
 
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
+  console.log("Hashage du mot de passe avant sauvegarde...");
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (err) {
+    next(err as Error);
+  }
 });
+userSchema.methods.comparePassword = async function (candidatePassword: string): Promise<boolean> {
+  return await bcrypt.compare(candidatePassword, this.password);
+};
 
-const User = mongoose.models.User || mongoose.model("User", userSchema);
-export default User;
+export default mongoose.models.User || mongoose.model("User", userSchema);
